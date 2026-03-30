@@ -30,6 +30,11 @@ export default function BlogIndexPage() {
       </p>
 
       <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+        {posts.length === 0 ? (
+          <p className="col-span-full text-center text-sm text-gray-500">
+            No posts yet. Check back soon for FinCEN compliance guides.
+          </p>
+        ) : null}
         {posts.map((post) => (
           <article
             key={post.slug}

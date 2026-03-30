@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Calendar, Mail, MapPin } from "lucide-react";
+import { toastSuccess } from "@/lib/toast";
 
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -23,7 +24,6 @@ const contactSchema = z.object({
 type ContactForm = z.infer<typeof contactSchema>;
 
 export function ContactClient() {
-  const [toast, setToast] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -54,8 +54,7 @@ export function ContactClient() {
         return;
       }
       reset();
-      setToast(true);
-      window.setTimeout(() => setToast(false), 5000);
+      toastSuccess("Message sent", "We'll be in touch soon.");
     } catch {
       setFormError("Network error. Please try again.");
     }
@@ -220,16 +219,6 @@ export function ContactClient() {
         </div>
       </div>
 
-      {toast ? (
-        <div
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
-          aria-live="polite"
-        >
-          <div className="rounded-lg bg-[#0F172A] px-6 py-3 text-sm font-medium text-white shadow-lg">
-            Message sent. We&apos;ll be in touch soon.
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

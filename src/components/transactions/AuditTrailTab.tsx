@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Lock } from "lucide-react";
+import { Activity, AlertTriangle, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Tooltip } from "@/components/ui/tooltip";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -105,7 +106,11 @@ export function AuditTrailTab({ transactionId }: { transactionId: string }) {
           </p>
         ) : null}
         {!loading && !error && auditLogs.length === 0 ? (
-          <p className="text-sm text-muted">No audit entries yet.</p>
+          <EmptyState
+            icon={<Activity aria-hidden />}
+            title="No activity yet"
+            description="Actions will appear here as you work on this transaction."
+          />
         ) : null}
         <div className="space-y-4">
           {auditLogs.map((entry) => (

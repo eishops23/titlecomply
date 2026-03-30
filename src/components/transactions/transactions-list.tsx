@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Modal } from "@/components/ui/modal";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
@@ -460,6 +461,8 @@ export function TransactionsList({
         </div>
       ) : (
         <div className="overflow-hidden rounded-md">
+          <div className="overflow-x-auto sm:mx-0 -mx-4">
+            <div className="min-w-[640px] sm:min-w-0">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-slate-50">
@@ -698,6 +701,8 @@ export function TransactionsList({
             totalPages={totalPages}
             onPageChange={onPageChange}
           />
+            </div>
+          </div>
         </div>
       )}
 
@@ -788,41 +793,21 @@ export function TransactionsList({
         </p>
       </Modal>
 
-      <Modal
+      <ConfirmModal
         open={bulkDeleteOpen}
         onClose={() => setBulkDeleteOpen(false)}
         title="Delete transactions?"
-        footer={
-          <>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setBulkDeleteOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              loading={actionLoading}
-              onClick={() =>
-                runBulk(async () => {
-                  await bulkDeleteTransactions(selectedIds);
-                  setBulkDeleteOpen(false);
-                })
-              }
-            >
-              Delete
-            </Button>
-          </>
+        message={`This will permanently delete ${selectedIds.length} transaction${selectedIds.length === 1 ? "" : "s"}. This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={actionLoading}
+        onConfirm={() =>
+          runBulk(async () => {
+            await bulkDeleteTransactions(selectedIds);
+            setBulkDeleteOpen(false);
+          })
         }
-      >
-        <p>
-          This will permanently delete{" "}
-          <strong>{selectedIds.length}</strong> transaction
-          {selectedIds.length === 1 ? "" : "s"}. This cannot be undone.
-        </p>
-      </Modal>
+      />
     </div>
   );
 }

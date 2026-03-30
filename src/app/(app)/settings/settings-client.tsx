@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { US_STATES } from "@/lib/constants";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 const orgSettingsSchema = z.object({
   company_name: z.string().min(1, "Company name is required"),
@@ -94,12 +95,12 @@ export function SettingsClient({
     });
 
     if (!response.ok) {
-      window.alert("Failed to save organization settings.");
+      toastError("Save failed", "Could not save organization settings.");
       return;
     }
 
     reset(values);
-    window.alert("Organization settings saved.");
+    toastSuccess("Settings saved");
   };
 
   return (
@@ -236,9 +237,11 @@ export function SettingsClient({
           </CardContent>
         </Card>
 
-        <Button type="submit" loading={isSubmitting}>
-          Save Changes
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button type="submit" loading={isSubmitting}>
+            Save Changes
+          </Button>
+        </div>
       </form>
     </div>
   );

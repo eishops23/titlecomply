@@ -1,5 +1,6 @@
 import { Footer } from "@/components/marketing/Footer";
 import { Navbar } from "@/components/marketing/Navbar";
+import { Toaster } from "@/components/ui/Toaster";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default function MarketingLayout({
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <Toaster />
     </div>
   );
 }

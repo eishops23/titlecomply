@@ -19,6 +19,7 @@ import {
   type FilingPipelineStatus,
 } from "@/components/filings/FilingStatusTracker";
 import { ValidationPanel } from "@/components/filings/ValidationPanel";
+import { toastError, toastSuccess } from "@/lib/toast";
 
 type TransactionWithRelations = Transaction & {
   entity_detail: EntityDetail | null;
@@ -81,8 +82,14 @@ export function FilingClient({ transaction }: { transaction: TransactionWithRela
         throw new Error(data.error || "Filing generation failed");
       }
       setFiling(data.filing);
+      toastSuccess("Filing generated", "Your FinCEN report is ready.");
     } catch (generationError) {
-      setError(generationError instanceof Error ? generationError.message : "Filing generation failed");
+      const msg =
+        generationError instanceof Error
+          ? generationError.message
+          : "Filing generation failed";
+      setError(msg);
+      toastError("Generation failed", msg);
     } finally {
       setIsGenerating(false);
     }

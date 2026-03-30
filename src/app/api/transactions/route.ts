@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 import { canCreateTransaction, incrementTransactionCount } from "@/lib/stripe";
 import { sendTransactionCreatedEmail } from "@/lib/email";
+import { apiError } from "@/lib/api-error";
 
 const createTransactionSchema = z
   .object({
@@ -183,10 +184,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to create transaction";
-    const status =
-      message === "Unauthorized" || message === "Organization required"
-        ? 401
-        : 500;
-    return NextResponse.json({ error: message }, { status });
+    if (message === "Unauthorized" || message === "Organization required") {
+      return apiError(message, 401);
+    }
+    console.error("[POST /api/transactions]", error);
+    return apiError(message, 500);
   }
 }

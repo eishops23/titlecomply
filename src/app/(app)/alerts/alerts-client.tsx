@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip";
+import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type AlertSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
@@ -100,6 +102,7 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [loading, setLoading] = React.useState(false);
+  const [confirmAcknowledgeAll, setConfirmAcknowledgeAll] = React.useState(false);
 
   const visible = React.useMemo(() => {
     let next = [...items];
@@ -156,7 +159,7 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
       });
       router.refresh();
     } catch {
-      window.alert("Could not acknowledge alert.");
+      toastError("Acknowledge failed", "Could not acknowledge alert.");
     } finally {
       setLoading(false);
     }
@@ -190,7 +193,7 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
       setSelectedIds(new Set());
       router.refresh();
     } catch {
-      window.alert("Could not acknowledge selected alerts.");
+      toastError("Acknowledge failed", "Could not acknowledge selected alerts.");
     } finally {
       setLoading(false);
     }
@@ -199,11 +202,16 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
   const onAcknowledgeAll = () => {
     const activeIds = items.filter((a) => !a.acknowledged).map((a) => a.id);
     if (activeIds.length === 0) return;
-    const ok = window.confirm(
-      `Acknowledge all ${activeIds.length} active alerts?`,
-    );
-    if (!ok) return;
-    void acknowledgeBulk(activeIds);
+    setConfirmAcknowledgeAll(true);
+  };
+
+  const runAcknowledgeAll = () => {
+    const activeIds = items.filter((a) => !a.acknowledged).map((a) => a.id);
+    if (activeIds.length === 0) {
+      setConfirmAcknowledgeAll(false);
+      return;
+    }
+    void acknowledgeBulk(activeIds).finally(() => setConfirmAcknowledgeAll(false));
   };
 
   const clearFilters = () => {
@@ -242,7 +250,7 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
               loading={loading}
               onClick={onAcknowledgeAll}
             >
-              Acknowledge All
+              Acknowledge all
             </Button>
           ) : null}
         </div>
@@ -307,7 +315,7 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
         <EmptyState
           icon={<Bell aria-hidden />}
           title="No alerts"
-          description="You're all caught up. Active alerts will appear here when compliance actions are needed."
+          description="You're all caught up."
         />
       ) : (
         <div className="space-y-3">
@@ -399,6 +407,17 @@ export function AlertsClient({ alerts }: { alerts: AlertListItem[] }) {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmAcknowledgeAll}
+        onClose={() => setConfirmAcknowledgeAll(false)}
+        onConfirm={() => runAcknowledgeAll()}
+        title="Acknowledge all alerts?"
+        message={`Mark all ${items.filter((a) => !a.acknowledged).length} active alerts as acknowledged?`}
+        confirmLabel="Acknowledge all"
+        variant="default"
+        isLoading={loading}
+      />
     </div>
   );
 }

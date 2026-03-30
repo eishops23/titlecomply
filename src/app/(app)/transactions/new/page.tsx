@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { BuyerType, FinancingStatus, ScreeningResult } from "@/generated/prisma/enums";
 import { Alert, Button, Input, Select } from "@/components/ui";
+import { toastSuccess } from "@/lib/toast";
 import { BUYER_TYPE_LABEL } from "@/lib/transactions-labels";
 
 export const dynamic = "force-dynamic";
@@ -261,6 +262,7 @@ export default function NewTransactionPage() {
 
       setScreening(screenBody.screening);
       setStep(4);
+      toastSuccess("Transaction created", "Screening complete — review the result below.");
     } catch (error) {
       setGlobalError(
         error instanceof Error ? error.message : "Failed to submit transaction",

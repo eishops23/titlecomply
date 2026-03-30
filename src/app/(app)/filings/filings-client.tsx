@@ -19,6 +19,7 @@ import {
   type SortDirection,
 } from "@/components/ui/table";
 import { Tooltip } from "@/components/ui/tooltip";
+import { toastError } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type FilingStatus =
@@ -152,7 +153,7 @@ export function FilingsClient({ filings }: { filings: FilingListItem[] }) {
       );
       router.refresh();
     } catch {
-      window.alert("Status update failed. Please try again.");
+      toastError("Update failed", "Could not update filing status.");
     } finally {
       setUpdatingId(null);
       setMenuOpenId(null);
@@ -298,8 +299,11 @@ export function FilingsClient({ filings }: { filings: FilingListItem[] }) {
         <EmptyState
           icon={<FileText aria-hidden />}
           title="No filings yet"
-          description="Create your first filing from a transaction"
-          action={{ label: "Go to transactions", onClick: () => router.push("/transactions") }}
+          description="Generate your first filing from a transaction."
+          action={{
+            label: "Go to transactions",
+            href: "/transactions",
+          }}
         />
       ) : filtered.length === 0 ? (
         <div className="rounded-md border border-dashed border-slate-200 bg-slate-50/50 px-6 py-10 text-center">
@@ -317,6 +321,8 @@ export function FilingsClient({ filings }: { filings: FilingListItem[] }) {
           </Button>
         </div>
       ) : (
+        <div className="overflow-x-auto sm:mx-0 -mx-4">
+          <div className="min-w-[640px] sm:min-w-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -483,6 +489,8 @@ export function FilingsClient({ filings }: { filings: FilingListItem[] }) {
             })}
           </TableBody>
         </Table>
+          </div>
+        </div>
       )}
     </div>
   );

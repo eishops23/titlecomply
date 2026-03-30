@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { FileImage, FileText, FileType2, Trash2 } from "lucide-react";
+import { FileImage, FileText, FileType2, Trash2, Upload } from "lucide-react";
 import { ExtractionStatus } from "@/generated/prisma/enums";
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { DOCUMENT_TYPE_LABELS } from "./DocumentUpload";
 
@@ -79,6 +81,7 @@ export function DocumentList({
   onReview,
 }: Props) {
   const [activeRowId, setActiveRowId] = React.useState<string | null>(null);
+  const [deleteId, setDeleteId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!documents.some((doc) => doc.extraction_status === ExtractionStatus.PROCESSING)) {
@@ -98,12 +101,14 @@ export function DocumentList({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm("Delete this document?")) return;
+  async function confirmDelete() {
+    if (!deleteId) return;
+    const id = deleteId;
     setActiveRowId(id);
     try {
       await fetch(`/api/documents/${id}`, { method: "DELETE" });
       onDeleted(id);
+      setDeleteId(null);
     } finally {
       setActiveRowId(null);
     }
@@ -114,7 +119,17 @@ export function DocumentList({
       <div className="border-b border-slate-200 px-4 py-3">
         <h2 className="text-sm font-semibold">Uploaded documents</h2>
       </div>
-      <div className="overflow-x-auto">
+      {documents.length === 0 ? (
+        <div className="p-4">
+          <EmptyState
+            icon={<Upload aria-hidden />}
+            title="No documents uploaded"
+            description="Upload your first document using the area above."
+          />
+        </div>
+      ) : (
+      <div className="overflow-x-auto sm:mx-0 -mx-4">
+        <div className="min-w-[640px] sm:min-w-0">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-600">
             <tr>
@@ -127,14 +142,7 @@ export function DocumentList({
             </tr>
           </thead>
           <tbody>
-            {documents.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-slate-500" colSpan={6}>
-                  No documents uploaded yet.
-                </td>
-              </tr>
-            ) : (
-              documents.map((doc) => (
+              {documents.map((doc) => (
                 <tr key={doc.id} className="border-t border-slate-100">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -171,18 +179,29 @@ export function DocumentList({
                         size="sm"
                         variant="ghost"
                         aria-label="Delete document"
-                        onClick={() => void handleDelete(doc.id)}
+                        onClick={() => setDeleteId(doc.id)}
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
           </tbody>
         </table>
+        </div>
       </div>
+      )}
+      <ConfirmModal
+        open={deleteId != null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={() => void confirmDelete()}
+        title="Delete document?"
+        message="This permanently removes the file from this transaction."
+        confirmLabel="Delete"
+        variant="danger"
+        isLoading={activeRowId != null && deleteId === activeRowId}
+      />
     </section>
   );
 }

@@ -3,12 +3,14 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip } from "@/components/ui/tooltip";
 import { PLAN_USER_LIMITS } from "@/lib/constants";
+import { toastError, toastSuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -68,6 +70,7 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
   const [inviteEmail, setInviteEmail] = React.useState("");
   const [inviteRole, setInviteRole] = React.useState<TeamMember["role"]>("CLOSER");
   const [busy, setBusy] = React.useState(false);
+  const [removeTarget, setRemoveTarget] = React.useState<TeamMember | null>(null);
 
   if (!organization) {
     return <p className="text-sm text-muted">Organization not found.</p>;
@@ -91,7 +94,7 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
       });
       const data = (await response.json()) as { user?: TeamMember; error?: string };
       if (!response.ok || !data.user) {
-        window.alert(data.error ?? "Failed to send invite.");
+        toastError("Invite failed", data.error ?? "Failed to send invite.");
         return;
       }
       const invitedUser = data.user;
@@ -99,7 +102,7 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
       setInviteEmail("");
       setInviteRole("CLOSER");
       setInviteOpen(false);
-      window.alert("Invitation sent successfully.");
+      toastSuccess("Invitation sent");
     } finally {
       setBusy(false);
     }
@@ -118,7 +121,7 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
       });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
-        window.alert(data.error ?? "Failed to update role.");
+        toastError("Role update failed", data.error ?? "Failed to update role.");
         return;
       }
       setUsers((prev) => prev.map((item) => (item.id === user.id ? { ...item, role } : item)));
@@ -127,24 +130,20 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
     }
   };
 
-  const onRemove = async (user: TeamMember) => {
-    const name = `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim() || user.email;
-    if (
-      !window.confirm(
-        `Remove ${name} from this organization? They will lose access immediately.`,
-      )
-    ) {
-      return;
-    }
+  const confirmRemove = async () => {
+    const user = removeTarget;
+    if (!user) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/team/${user.id}`, { method: "DELETE" });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) {
-        window.alert(data.error ?? "Failed to remove member.");
+        toastError("Remove failed", data.error ?? "Failed to remove member.");
         return;
       }
       setUsers((prev) => prev.filter((item) => item.id !== user.id));
+      toastSuccess("Team member removed");
+      setRemoveTarget(null);
     } finally {
       setBusy(false);
     }
@@ -172,6 +171,8 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto sm:mx-0 -mx-4">
+            <div className="min-w-[640px] sm:min-w-0 px-4 sm:px-0">
           <div className="mb-4 h-2 w-full overflow-hidden rounded bg-slate-200">
             <div
               className={cn("h-full transition-[width]", usageColorClass(usagePercent))}
@@ -225,7 +226,7 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
                             variant="ghost"
                             className="text-danger hover:bg-red-50 hover:text-danger"
                             disabled={busy || removeBlocked}
-                            onClick={() => void onRemove(user)}
+                            onClick={() => setRemoveTarget(user)}
                           >
                             Remove
                           </Button>
@@ -237,8 +238,25 @@ export function TeamClient({ organization }: { organization: TeamOrg | null }) {
               })}
             </TableBody>
           </Table>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={removeTarget != null}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={() => void confirmRemove()}
+        title="Remove team member?"
+        message={
+          removeTarget
+            ? `Remove ${`${removeTarget.first_name ?? ""} ${removeTarget.last_name ?? ""}`.trim() || removeTarget.email} from this organization? They will lose access immediately.`
+            : ""
+        }
+        confirmLabel="Remove"
+        variant="danger"
+        isLoading={busy}
+      />
 
       <Modal
         open={inviteOpen}
