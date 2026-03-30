@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "TitleComply privacy policy. How we collect, use, and protect your data.",
+  robots: { index: true, follow: true },
+};
 
 export default function PrivacyPage() {
   return (

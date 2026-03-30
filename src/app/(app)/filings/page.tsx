@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { FilingsClient, type FilingListItem } from "./filings-client";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Filings",
+};
 
 export default async function FilingsPage() {
   const filings = await prisma.filing.findMany({

@@ -4,9 +4,14 @@ import { BuyerType } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { decrypt } from "@/lib/encryption";
+import type { Metadata } from "next";
 import { CollectClient } from "./collect-client";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Collect data",
+};
 
 function maskLast4(value: string | null | undefined): string {
   if (!value) return "";

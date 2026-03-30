@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { PricingCards } from "@/components/marketing/PricingCards";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Simple, transparent pricing for FinCEN compliance automation. Starter $199/mo, Professional $499/mo, Enterprise $999/mo. 14-day free trial on every plan.",
+  alternates: { canonical: "https://titlecomply.com/pricing" },
+};
 
 function Check() {
   return (

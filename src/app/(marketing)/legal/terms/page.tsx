@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "TitleComply terms of service. Usage terms, billing, and compliance disclaimer.",
+  robots: { index: true, follow: true },
+};
 
 export default function TermsPage() {
   return (

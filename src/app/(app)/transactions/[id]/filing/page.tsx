@@ -2,9 +2,14 @@ import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
 import { FilingClient } from "./filing-client";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Filing",
+};
 
 export default async function TransactionFilingPage({
   params,

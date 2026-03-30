@@ -1,9 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
 import { TransactionDetail } from "./transaction-detail";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Transaction",
+};
 
 export default async function TransactionDetailPage({
   params,

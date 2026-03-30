@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "TitleComply was built by title industry professionals who saw the FinCEN compliance burden firsthand. Enterprise-grade automation for every title company.",
+  alternates: { canonical: "https://titlecomply.com/about" },
+};
 
 export default function AboutPage() {
   return (

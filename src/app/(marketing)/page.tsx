@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   Bell,
@@ -12,8 +13,76 @@ import {
 } from "lucide-react";
 import { MarketingFaq } from "@/components/marketing/MarketingFaq";
 import { PricingCards } from "@/components/marketing/PricingCards";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { MARKETING_FAQ_ITEMS } from "@/lib/marketing-faq-data";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "FinCEN Compliance Automation for Title & Escrow | TitleComply",
+  description:
+    "Every title company must now file FinCEN Real Estate Reports on cash-to-entity transactions. TitleComply automates the entire process — from screening to filing — in 15 minutes.",
+  alternates: { canonical: "https://titlecomply.com" },
+};
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "TitleComply",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: "https://titlecomply.com",
+  description:
+    "AI-powered FinCEN Real Estate Report compliance automation for title companies and escrow agents.",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "29",
+    highPrice: "999",
+    priceCurrency: "USD",
+    offerCount: 4,
+  },
+  featureList: [
+    "FinCEN screening engine",
+    "Guided data collection",
+    "AI document extraction",
+    "One-click report generation",
+    "Tamper-proof audit trail",
+    "Automated reminders",
+  ],
+};
+
+const orgSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "TitleComply",
+  url: "https://titlecomply.com",
+  logo: "https://titlecomply.com/logo.png",
+  description:
+    "FinCEN compliance automation for title and escrow companies.",
+  address: {
+    "@type": "PostalAddress",
+    addressRegion: "FL",
+    addressCountry: "US",
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    email: "support@titlecomply.com",
+  },
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: MARKETING_FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.a,
+    },
+  })),
+};
 
 const howSteps = [
   {
@@ -78,6 +147,9 @@ const featureCards = [
 export default function HomePage() {
   return (
     <>
+      <JsonLd data={softwareSchema} />
+      <JsonLd data={orgSchema} />
+      <JsonLd data={faqSchema} />
       <section className="bg-white pb-20 pt-24 md:pb-28 md:pt-32">
         <div className="mx-auto max-w-7xl px-6">
           <h1 className="text-center text-5xl font-bold leading-[1.1] tracking-tight text-[#0F172A] md:text-6xl">

@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { AlertsClient, type AlertListItem } from "./alerts-client";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Alerts",
+};
 
 export default async function AlertsPage() {
   const alerts = await prisma.alert.findMany({

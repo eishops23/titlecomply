@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -18,6 +19,10 @@ import {
 } from "@/lib/transactions-list-params";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Transactions",
+};
 
 function truncateAddress(full: string, max = 48): string {
   const t = full.trim();
