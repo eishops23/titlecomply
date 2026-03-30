@@ -1,0 +1,421 @@
+// TitleComply — database schema (see SPEC.md §4)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Organization {
+  id                     String    @id @default(uuid())
+  clerk_org_id           String    @unique
+  name                   String
+  plan                   Plan      @default(STARTER)
+  stripe_customer_id     String?   @unique
+  stripe_subscription_id String?   @unique
+  trial_ends_at          DateTime?
+
+  company_name    String?
+  company_address String?
+  company_city    String?
+  company_state   String?
+  company_zip     String?
+  company_phone   String?
+  company_email   String?
+  license_number  String?
+  underwriter     String?
+
+  default_reminder_days Int     @default(3)
+  auto_screen           Boolean @default(true)
+
+  monthly_transaction_limit Int       @default(25)
+  monthly_transaction_count Int       @default(0)
+  limit_reset_at            DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  users        User[]
+  transactions Transaction[]
+  filings      Filing[]
+  audit_logs   AuditLog[]
+  alerts       Alert[]
+}
+
+enum Plan {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  PAY_PER_FILE
+}
+
+model User {
+  id            String       @id @default(uuid())
+  clerk_user_id String       @unique
+  org_id        String
+  organization  Organization @relation(fields: [org_id], references: [id])
+
+  email      String
+  first_name String?
+  last_name  String?
+  role       UserRole @default(CLOSER)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  transactions         Transaction[] @relation("AssignedTo")
+  created_transactions Transaction[] @relation("CreatedBy")
+  audit_logs           AuditLog[]
+
+  @@unique([org_id, email])
+}
+
+enum UserRole {
+  ADMIN
+  COMPLIANCE_OFFICER
+  CLOSER
+  PROCESSOR
+  READ_ONLY
+}
+
+model Transaction {
+  id            String       @id @default(uuid())
+  org_id        String
+  organization  Organization @relation(fields: [org_id], references: [id])
+
+  file_number String?
+
+  assigned_to_id String?
+  assigned_to    User?   @relation("AssignedTo", fields: [assigned_to_id], references: [id])
+  created_by_id  String
+  created_by     User    @relation("CreatedBy", fields: [created_by_id], references: [id])
+
+  status TransactionStatus @default(SCREENING)
+
+  property_address  String
+  property_city     String
+  property_county   String
+  property_state    String
+  property_zip      String
+
+  purchase_price Decimal?  @db.Decimal(12, 2)
+  closing_date   DateTime?
+
+  buyer_type         BuyerType?
+  financing_status   FinancingStatus?
+  screening_result   ScreeningResult?
+  screening_reason   String?
+  screened_at        DateTime?
+
+  data_collection       Json?
+  collection_progress Float @default(0)
+
+  notes String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  beneficial_owners BeneficialOwner[]
+  entity_detail       EntityDetail?
+  trust_detail        TrustDetail?
+  documents           Document[]
+  filings               Filing[]
+  audit_logs            AuditLog[]
+  reminders             Reminder[]
+  alerts                Alert[]
+
+  @@index([org_id, status])
+  @@index([org_id, created_at])
+  @@index([assigned_to_id])
+}
+
+enum TransactionStatus {
+  SCREENING
+  REQUIRES_FILING
+  NO_FILING_REQUIRED
+  COLLECTING
+  VALIDATING
+  READY_TO_FILE
+  FILED
+  ACCEPTED
+  REJECTED
+  ARCHIVED
+}
+
+enum BuyerType {
+  INDIVIDUAL
+  LLC
+  CORPORATION
+  PARTNERSHIP
+  TRUST
+  OTHER_ENTITY
+}
+
+enum FinancingStatus {
+  FINANCED
+  NON_FINANCED
+  PARTIAL_FINANCING
+  SELLER_FINANCED
+}
+
+enum ScreeningResult {
+  REQUIRED
+  NOT_REQUIRED
+  NEEDS_REVIEW
+}
+
+model BeneficialOwner {
+  id              String      @id @default(uuid())
+  transaction_id  String
+  transaction     Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  first_name String
+  last_name  String
+  date_of_birth String?
+  ssn_itin      String?
+
+  address String?
+  city    String?
+  state   String?
+  zip     String?
+  country String @default("US")
+
+  ownership_percentage Float
+  ownership_type       String?
+
+  id_type       String?
+  id_number     String?
+  id_state      String?
+  id_country    String?
+  id_expiration DateTime?
+
+  verified    Boolean   @default(false)
+  verified_by String?
+  verified_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([transaction_id])
+}
+
+model EntityDetail {
+  id             String      @id @default(uuid())
+  transaction_id String      @unique
+  transaction    Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  entity_name String
+  entity_type BuyerType
+
+  formation_state   String?
+  formation_country String    @default("US")
+  formation_date    DateTime?
+
+  ein                       String?
+  state_registration_number String?
+
+  registered_agent_name    String?
+  registered_agent_address String?
+
+  principal_place_of_business String?
+  business_purpose            String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model TrustDetail {
+  id             String      @id @default(uuid())
+  transaction_id String      @unique
+  transaction    Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  trust_name String
+  trust_date DateTime?
+  trust_type String?
+
+  trustee_name    String?
+  trustee_address String?
+  grantor_name    String?
+  grantor_address String?
+
+  beneficiaries Json?
+
+  ein String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model Document {
+  id             String      @id @default(uuid())
+  transaction_id String
+  transaction    Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  file_name String
+  file_type String
+  file_size Int
+  file_url  String
+
+  document_type DocumentType
+
+  extraction_status     ExtractionStatus @default(PENDING)
+  extraction_result       Json?
+  extraction_confidence Float?
+  extracted_at            DateTime?
+
+  verified    Boolean   @default(false)
+  verified_by String?
+  verified_at DateTime?
+
+  uploaded_by String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([transaction_id])
+}
+
+enum DocumentType {
+  OPERATING_AGREEMENT
+  ARTICLES_OF_INCORPORATION
+  ARTICLES_OF_ORGANIZATION
+  TRUST_DOCUMENT
+  TRUST_AMENDMENT
+  CERTIFICATE_OF_GOOD_STANDING
+  EIN_LETTER
+  GOVERNMENT_ID
+  PASSPORT
+  PURCHASE_AGREEMENT
+  SETTLEMENT_STATEMENT
+  WIRE_INSTRUCTIONS
+  OTHER
+}
+
+enum ExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model Filing {
+  id             String       @id @default(uuid())
+  org_id         String
+  organization   Organization @relation(fields: [org_id], references: [id])
+  transaction_id String
+  transaction    Transaction  @relation(fields: [transaction_id], references: [id])
+
+  filing_data Json
+  filing_type String @default("REAL_ESTATE_REPORT")
+
+  status FilingStatus @default(DRAFT)
+
+  pdf_url String?
+
+  filed_at              DateTime?
+  confirmation_number   String?
+  rejection_reason      String?
+
+  validation_errors Json?
+  validated_at      DateTime?
+
+  generated_by String
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([org_id, status])
+  @@index([transaction_id])
+}
+
+enum FilingStatus {
+  DRAFT
+  VALIDATED
+  GENERATED
+  FILED
+  ACCEPTED
+  REJECTED
+  AMENDED
+}
+
+model AuditLog {
+  id          String       @id @default(uuid())
+  org_id      String
+  organization Organization @relation(fields: [org_id], references: [id])
+  user_id     String?
+  user        User?        @relation(fields: [user_id], references: [id])
+  transaction_id String?
+  transaction    Transaction? @relation(fields: [transaction_id], references: [id])
+
+  action     String
+  details    Json?
+  ip_address String?
+  user_agent String?
+
+  previous_hash String?
+  current_hash  String
+
+  created_at DateTime @default(now())
+
+  @@index([org_id, created_at])
+  @@index([transaction_id])
+}
+
+model Alert {
+  id          String       @id @default(uuid())
+  org_id      String
+  organization Organization @relation(fields: [org_id], references: [id])
+  transaction_id String?
+  transaction    Transaction? @relation(fields: [transaction_id], references: [id])
+
+  type     AlertType
+  severity AlertSeverity
+  title    String
+  message  String
+
+  acknowledged    Boolean   @default(false)
+  acknowledged_by String?
+  acknowledged_at DateTime?
+
+  created_at DateTime @default(now())
+
+  @@index([org_id, acknowledged])
+}
+
+enum AlertType {
+  OVERDUE_FILING
+  MISSING_DATA
+  SCREENING_REQUIRED
+  FILING_REJECTED
+  SUBSCRIPTION_EXPIRING
+  MONTHLY_LIMIT_APPROACHING
+  REGULATION_UPDATE
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Reminder {
+  id             String      @id @default(uuid())
+  transaction_id String
+  transaction    Transaction @relation(fields: [transaction_id], references: [id], onDelete: Cascade)
+
+  type            String
+  recipient_email String
+  subject         String
+  body            String
+
+  sent        Boolean   @default(false)
+  sent_at     DateTime?
+  scheduled_for DateTime
+
+  created_at DateTime @default(now())
+
+  @@index([scheduled_for, sent])
+}
