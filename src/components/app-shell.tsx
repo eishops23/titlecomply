@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const nav = [
@@ -29,6 +29,22 @@ const nav = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch("/api/alerts?status=active", {
+          cache: "no-store",
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as { alerts?: unknown[] };
+        setUnreadAlerts(Array.isArray(data.alerts) ? data.alerts.length : 0);
+      } catch {
+        setUnreadAlerts(0);
+      }
+    })();
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -75,7 +91,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   collapsed && "justify-center px-0",
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                <span className="relative inline-flex">
+                  <Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                  {href === "/alerts" && unreadAlerts > 0 ? (
+                    <span className="absolute -top-1.5 -right-1.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold leading-none text-white">
+                      {unreadAlerts > 99 ? "99+" : unreadAlerts}
+                    </span>
+                  ) : null}
+                </span>
                 {!collapsed && <span className="truncate">{label}</span>}
               </Link>
             );

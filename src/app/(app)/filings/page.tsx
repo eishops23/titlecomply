@@ -1,10 +1,28 @@
+import { prisma } from "@/lib/db";
+import { FilingsClient, type FilingListItem } from "./filings-client";
+
 export const dynamic = "force-dynamic";
 
-export default function FilingsPage() {
+export default async function FilingsPage() {
+  const filings = await prisma.filing.findMany({
+    orderBy: { created_at: "desc" },
+    include: {
+      transaction: {
+        select: {
+          id: true,
+          file_number: true,
+          property_address: true,
+          property_city: true,
+          property_state: true,
+          property_zip: true,
+        },
+      },
+    },
+  });
+
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-semibold text-foreground">Filings</h1>
-      <p className="mt-2 text-muted">Filings will appear here.</p>
+    <div className="p-6">
+      <FilingsClient filings={filings as FilingListItem[]} />
     </div>
   );
 }
