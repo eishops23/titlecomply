@@ -7,15 +7,18 @@ import {
   FileCheck,
   FileSearch,
   FileText,
-  HardDrive,
   Lock,
   ShieldAlert,
   Shield,
-  ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
+import { FreeToolsBanner } from "@/components/marketing/FreeToolsBanner";
+import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { MarketingFaq } from "@/components/marketing/MarketingFaq";
+import { ProductDemo } from "@/components/marketing/ProductDemo";
 import { PricingCards } from "@/components/marketing/PricingCards";
+import { RoiCalculator } from "@/components/marketing/RoiCalculator";
+import { SocialProof } from "@/components/marketing/SocialProof";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { MARKETING_FAQ_ITEMS } from "@/lib/marketing-faq-data";
 
@@ -200,6 +203,8 @@ export default function HomePage() {
         </div>
       </section>
 
+      <ProductDemo />
+
       <section className="bg-gray-50/50 py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-3xl font-bold tracking-tight text-[#0F172A] md:text-4xl">
@@ -308,6 +313,10 @@ export default function HomePage() {
         </div>
       </section>
 
+      <FreeToolsBanner />
+
+      <SocialProof />
+
       <section className="bg-white py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-6">
           <h2 className="text-center text-3xl font-bold tracking-tight text-[#0F172A] md:text-4xl">
@@ -327,34 +336,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="bg-gray-50/50 py-24 md:py-32">
-        <div className="mx-auto max-w-7xl px-6">
-          <h2 className="text-center text-3xl font-bold tracking-tight text-[#0F172A] md:text-4xl">
-            Built for Title Professionals, by Title Professionals
-          </h2>
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-8 md:gap-12">
-            {[
-              { Icon: Lock, label: "AES-256 Encryption" },
-              { Icon: ShieldCheck, label: "SOC 2 Ready" },
-              { Icon: HardDrive, label: "Encrypted at Rest" },
-            ].map(({ Icon, label }) => (
-              <div key={label} className="flex flex-col items-center gap-3">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
-                  <Icon className="h-7 w-7 text-[#2563EB]" />
-                </div>
-                <span className="text-sm font-medium text-[#0F172A]">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="mx-auto mt-8 max-w-lg text-center text-sm text-gray-400">
-            Your data is encrypted with the same standard used by banks and
-            government agencies. Every action is recorded in a tamper-evident
-            audit trail.
-          </p>
-        </div>
-      </section>
+      <RoiCalculator />
+
+      <LeadCapture />
 
       <section className="bg-white py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-6">
