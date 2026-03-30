@@ -11,6 +11,8 @@ import { buildFilingData, generateFilingPdf } from "@/lib/filing-generator";
 import { validateTransaction, type ValidatableTransaction } from "@/lib/validation";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 import { sendFilingGeneratedEmail } from "@/lib/email";
+import { chargePerFiling } from "@/lib/stripe";
+import { isPayPerFilePlan } from "@/lib/plan-gates";
 
 export const dynamic = "force-dynamic";
 
@@ -194,6 +196,27 @@ export async function POST(
       }
     } catch (emailError) {
       console.error("[email] Failed to send filing_generated:", emailError);
+    }
+
+    if (isPayPerFilePlan(transaction.organization.plan)) {
+      try {
+        const chargeResult = await chargePerFiling(transaction.org_id);
+        if (chargeResult.error) {
+          console.warn(`[generate-filing] Per-file charge warning: ${chargeResult.error}`);
+          await prisma.alert.create({
+            data: {
+              org_id: transaction.org_id,
+              transaction_id: transaction.id,
+              type: "SUBSCRIPTION_EXPIRING",
+              severity: "MEDIUM",
+              title: "Per-File Charge Failed",
+              message: `Filing ${filingId} was generated but the $29 per-file charge could not be processed: ${chargeResult.error}. Please update your payment method.`,
+            },
+          });
+        }
+      } catch (chargeError) {
+        console.error("[generate-filing] Per-file charge error:", chargeError);
+      }
     }
 
     return NextResponse.json({ filing, filingId }, { status: 201 });

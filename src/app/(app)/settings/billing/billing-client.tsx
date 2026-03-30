@@ -6,11 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PLAN_PRICING, PLAN_USER_LIMITS, PLANS } from "@/lib/constants";
+import { PLAN_PRICING } from "@/lib/constants";
+import { PLAN_FEATURES, type PlanId } from "@/lib/plan-gates";
 import { cn } from "@/lib/utils";
 
 type BillingOrg = {
-  plan: "STARTER" | "PROFESSIONAL" | "ENTERPRISE" | "PAY_PER_FILE";
+  plan: PlanId;
   monthly_transaction_count: number;
   trial_ends_at: Date | string | null;
   stripe_customer_id?: string | null;
@@ -91,8 +92,10 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
   }
 
   const currentPlan = PLAN_PRICING[organization.plan];
-  const txnLimit = PLANS[organization.plan].monthlyTransactionLimit;
-  const userLimit = PLAN_USER_LIMITS[organization.plan];
+  const planFeatures = PLAN_FEATURES[organization.plan];
+  const txnLimit =
+    planFeatures.transactionsPerMonth === -1 ? Number.POSITIVE_INFINITY : planFeatures.transactionsPerMonth;
+  const userLimit = planFeatures.users === -1 ? Number.POSITIVE_INFINITY : planFeatures.users;
   const txnPercent =
     txnLimit && Number.isFinite(txnLimit)
       ? Math.min(100, Math.round((organization.monthly_transaction_count / txnLimit) * 100))
@@ -106,6 +109,33 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
     const trialDate = new Date(organization.trial_ends_at);
     const daysRemaining = Math.ceil((trialDate.getTime() - Date.now()) / 86400000);
     trialLabel = daysRemaining > 0 ? `Trial: Active — ${daysRemaining} days remaining` : "Trial expired";
+  }
+
+  function summarizeFeatureSet(planId: PlanId): string {
+    const features = PLAN_FEATURES[planId];
+    const labels: Record<keyof typeof features, string> = {
+      transactionsPerMonth: "Transactions",
+      users: "Users",
+      screening: "Screening",
+      dataCollection: "Data collection",
+      filingGeneration: "Filing generation",
+      auditTrail: "Audit trail",
+      ofacScreening: "OFAC screening",
+      wireFraudPrevention: "Wire fraud prevention",
+      aiDocExtraction: "AI document extraction",
+      form1099sReporting: "1099-S reporting",
+      prioritySupport: "Priority support",
+      apiAccess: "API access",
+      multiOffice: "Multi-office",
+      whiteLabel: "White-label",
+      customIntegrations: "Custom integrations",
+    };
+
+    return (Object.keys(features) as (keyof typeof features)[])
+      .filter((key) => typeof features[key] === "boolean" && features[key] === true)
+      .map((key) => labels[key])
+      .slice(0, 3)
+      .join(" · ");
   }
 
   return (
@@ -195,9 +225,19 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
               >
                 <p className="font-semibold text-foreground">{plan.name}</p>
                 <p className="mt-1 text-sm text-muted">{plan.priceLabel}</p>
-                <p className="mt-2 text-xs text-muted">Transactions: {plan.transactions}</p>
-                <p className="text-xs text-muted">Users: {plan.users}</p>
-                <p className="mt-2 text-xs text-muted">{plan.features[1] ?? plan.features[0]}</p>
+                <p className="mt-2 text-xs text-muted">
+                  Transactions:{" "}
+                  {PLAN_FEATURES[typedPlanId].transactionsPerMonth === -1
+                    ? "Unlimited"
+                    : PLAN_FEATURES[typedPlanId].transactionsPerMonth}
+                </p>
+                <p className="text-xs text-muted">
+                  Users:{" "}
+                  {PLAN_FEATURES[typedPlanId].users === -1
+                    ? "Unlimited"
+                    : PLAN_FEATURES[typedPlanId].users}
+                </p>
+                <p className="mt-2 text-xs text-muted">{summarizeFeatureSet(typedPlanId)}</p>
                 <div className="mt-3">
                   {isCurrent ? (
                     <Button size="sm" variant="secondary" disabled>

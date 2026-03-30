@@ -3,6 +3,7 @@ import { z } from "zod";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { requires1099S } from "@/lib/form-1099s";
+import { getUpgradeMessage, planHasFeature } from "@/lib/plan-gates";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,12 @@ const schema = z.object({ year: z.number().int().min(2020).max(2100) });
 export async function POST(request: NextRequest) {
   try {
     const { organization } = await resolveUser();
+    if (!planHasFeature(organization.plan, "form1099sReporting")) {
+      return NextResponse.json(
+        { error: getUpgradeMessage("form1099sReporting", organization.plan) },
+        { status: 403 },
+      );
+    }
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 });
     const year = parsed.data.year;

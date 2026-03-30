@@ -7,8 +7,8 @@ import { extractFromDocument, extractFromImage } from "@/lib/claude";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { extractTextFromPdf, readFile } from "@/lib/storage";
-import { planHasAiExtraction } from "@/lib/stripe";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
+import { getUpgradeMessage, planHasFeature } from "@/lib/plan-gates";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +54,9 @@ export async function POST(
       where: { id: document.transaction.org_id },
       select: { plan: true },
     });
-    if (org && !planHasAiExtraction(org.plan)) {
+    if (org && !planHasFeature(org.plan, "aiDocExtraction")) {
       return NextResponse.json(
-        {
-          error:
-            "AI document extraction requires a Professional or Enterprise plan. Upgrade to access this feature.",
-        },
+        { error: getUpgradeMessage("aiDocExtraction", org.plan) },
         { status: 403 },
       );
     }

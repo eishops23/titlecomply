@@ -14,11 +14,15 @@ import { DocumentUpload } from "@/components/documents/DocumentUpload";
 import { DocumentList } from "@/components/documents/DocumentList";
 import { ExtractionReview } from "@/components/documents/ExtractionReview";
 import { Alert } from "@/components/ui/alert";
+import { planHasFeature } from "@/lib/plan-gates";
 
 export const dynamic = "force-dynamic";
 
 type TransactionPayload = Transaction & {
   documents: Document[];
+  organization: {
+    plan: string;
+  };
   entity_detail: EntityDetail | null;
   trust_detail: TrustDetail | null;
   beneficial_owners: BeneficialOwner[];
@@ -122,6 +126,8 @@ export default function TransactionDocumentsPage() {
           router.refresh();
         }}
         onReview={(id) => void openReview(id)}
+        canExtract={planHasFeature(transaction.organization.plan, "aiDocExtraction")}
+        currentPlan={transaction.organization.plan}
       />
 
       {selectedDocument ? (

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
+import { UpgradePrompt } from "@/components/ui/UpgradePrompt";
 import { DOCUMENT_TYPE_LABELS } from "./DocumentUpload";
 
 type DocumentRow = {
@@ -24,6 +25,8 @@ type Props = {
   onExtracted: () => void;
   onDeleted: (id: string) => void;
   onReview: (id: string) => void;
+  canExtract?: boolean;
+  currentPlan?: string;
 };
 
 function formatSize(bytes: number): string {
@@ -79,6 +82,8 @@ export function DocumentList({
   onExtracted,
   onDeleted,
   onReview,
+  canExtract = true,
+  currentPlan = "STARTER",
 }: Props) {
   const [activeRowId, setActiveRowId] = React.useState<string | null>(null);
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -119,7 +124,16 @@ export function DocumentList({
       <div className="border-b border-slate-200 px-4 py-3">
         <h2 className="text-sm font-semibold">Uploaded documents</h2>
       </div>
-      {documents.length === 0 ? (
+      {!canExtract ? (
+        <div className="p-4">
+          <UpgradePrompt
+            feature="AI Document Extraction"
+            requiredPlan="PROFESSIONAL"
+            currentPlan={currentPlan}
+            className="p-6"
+          />
+        </div>
+      ) : documents.length === 0 ? (
         <div className="p-4">
           <EmptyState
             icon={<Upload aria-hidden />}

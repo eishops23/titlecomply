@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getUpgradeMessage, planHasFeature } from "@/lib/plan-gates";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,12 @@ function csvEscape(value: string): string {
 export async function GET(request: NextRequest) {
   try {
     const { organization } = await resolveUser();
+    if (!planHasFeature(organization.plan, "form1099sReporting")) {
+      return NextResponse.json(
+        { error: getUpgradeMessage("form1099sReporting", organization.plan) },
+        { status: 403 },
+      );
+    }
     const year = Number(request.nextUrl.searchParams.get("year") || new Date().getFullYear());
     const start = new Date(Date.UTC(year, 0, 1));
     const end = new Date(Date.UTC(year + 1, 0, 1));

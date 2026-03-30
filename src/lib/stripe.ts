@@ -1,6 +1,12 @@
 import Stripe from "stripe";
 import type { Plan } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/db";
+import {
+  getTransactionLimit,
+  getUserLimit,
+  isPayPerFilePlan,
+  planHasFeature,
+} from "@/lib/plan-gates";
 
 let stripeInstance: Stripe | null = null;
 
@@ -263,8 +269,8 @@ export async function canCreateTransaction(orgId: string): Promise<{
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     select: {
+      plan: true,
       monthly_transaction_count: true,
-      monthly_transaction_limit: true,
     },
   });
 
@@ -277,7 +283,8 @@ export async function canCreateTransaction(orgId: string): Promise<{
     };
   }
 
-  const limit = org.monthly_transaction_limit;
+  const planLimit = getTransactionLimit(org.plan);
+  const limit = planLimit === -1 ? 999999 : planLimit;
   const current = org.monthly_transaction_count;
   if (limit >= 999999 || limit === -1) {
     return { allowed: true, current, limit };
@@ -315,13 +322,9 @@ export async function canInviteTeamMember(orgId: string): Promise<{
     };
   }
 
-  const plan = PLAN_CONFIG[org.plan];
-  if (!plan) {
-    return { allowed: false, current: 0, limit: 0, message: "Invalid plan" };
-  }
-
   const userCount = await prisma.user.count({ where: { org_id: orgId } });
-  const limit = plan.userLimit === -1 ? 999999 : plan.userLimit;
+  const userLimit = getUserLimit(org.plan);
+  const limit = userLimit === -1 ? 999999 : userLimit;
 
   if (userCount >= limit) {
     return {
@@ -336,8 +339,7 @@ export async function canInviteTeamMember(orgId: string): Promise<{
 }
 
 export function planHasAiExtraction(plan: PlanId): boolean {
-  const config = PLAN_CONFIG[plan];
-  return config?.hasAiExtraction ?? false;
+  return planHasFeature(plan, "aiDocExtraction");
 }
 
 export async function incrementTransactionCount(orgId: string): Promise<void> {
@@ -345,4 +347,53 @@ export async function incrementTransactionCount(orgId: string): Promise<void> {
     where: { id: orgId },
     data: { monthly_transaction_count: { increment: 1 } },
   });
+}
+
+export async function chargePerFiling(orgId: string): Promise<{
+  charged: boolean;
+  invoiceId?: string;
+  error?: string;
+}> {
+  const org = await prisma.organization.findUnique({
+    where: { id: orgId },
+    select: { plan: true, stripe_customer_id: true },
+  });
+
+  if (!org) return { charged: false, error: "Organization not found" };
+  if (!isPayPerFilePlan(org.plan)) return { charged: false };
+
+  if (!org.stripe_customer_id) {
+    return { charged: false, error: "No billing customer. Set up billing first." };
+  }
+
+  const stripe = getStripe();
+  const perFilePriceId = process.env.STRIPE_PRICE_PER_FILE;
+  if (!perFilePriceId || perFilePriceId === "price_per_file_placeholder") {
+    console.log(
+      `[stripe] Per-file charge skipped - STRIPE_PRICE_PER_FILE not configured. Org: ${orgId}`,
+    );
+    return { charged: false };
+  }
+
+  try {
+    await stripe.invoiceItems.create({
+      customer: org.stripe_customer_id,
+      pricing: { price: perFilePriceId },
+      description: "TitleComply - FinCEN Real Estate Report Filing",
+    });
+
+    const invoice = await stripe.invoices.create({
+      customer: org.stripe_customer_id,
+      auto_advance: true,
+      collection_method: "charge_automatically",
+    });
+    const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
+
+    console.log(`[stripe] Per-file charge: $29 for org ${orgId}, invoice ${finalizedInvoice.id}`);
+    return { charged: true, invoiceId: finalizedInvoice.id };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[stripe] Per-file charge failed for org ${orgId}:`, message);
+    return { charged: false, error: message };
+  }
 }

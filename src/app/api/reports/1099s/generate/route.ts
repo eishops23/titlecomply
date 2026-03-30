@@ -3,12 +3,12 @@ import path from "node:path";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
-import { Plan } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { build1099SData } from "@/lib/form-1099s";
 import { generate1099SPdf } from "@/lib/form-1099s-generator";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
+import { getUpgradeMessage, planHasFeature } from "@/lib/plan-gates";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +20,11 @@ export async function POST(request: NextRequest) {
     const { user, organization } = await resolveUser();
     const parsed = schema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 });
-    if (organization.plan !== Plan.PROFESSIONAL && organization.plan !== Plan.ENTERPRISE) {
-      return NextResponse.json({ error: "Upgrade required for 1099-S generation" }, { status: 402 });
+    if (!planHasFeature(organization.plan, "form1099sReporting")) {
+      return NextResponse.json(
+        { error: getUpgradeMessage("form1099sReporting", organization.plan) },
+        { status: 403 },
+      );
     }
 
     const transaction = await prisma.transaction.findFirst({
