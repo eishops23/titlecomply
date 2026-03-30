@@ -9,6 +9,7 @@ import type {
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +59,7 @@ export async function POST(
 
     const document = await prisma.document.findFirst({
       where: { id: parsedParams.data.id, transaction: { org_id: organization.id } },
-      include: { transaction: { select: { id: true } } },
+      include: { transaction: { select: { id: true, org_id: true } } },
     });
     if (!document) {
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
@@ -226,6 +227,19 @@ export async function POST(
       where: { id: document.id },
       data: { verified: true, verified_at: new Date() },
     });
+
+    try {
+      await logAudit({
+        orgId: document.transaction.org_id,
+        action: "document.data_applied",
+        details: { document_id: parsedParams.data.id, extraction_type: result.type },
+        transactionId: document.transaction.id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

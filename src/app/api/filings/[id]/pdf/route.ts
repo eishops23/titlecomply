@@ -5,13 +5,14 @@ import { z } from "zod";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import type { FilingData } from "@/lib/filing-generator";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -26,7 +27,7 @@ export async function GET(
 
     const filing = await prisma.filing.findFirst({
       where: { id: parsed.data.id, org_id: organization.id },
-      select: { id: true, pdf_url: true, filing_data: true },
+      select: { id: true, org_id: true, pdf_url: true, filing_data: true },
     });
     if (!filing) {
       return NextResponse.json({ error: "Filing not found" }, { status: 404 });
@@ -43,6 +44,18 @@ export async function GET(
       const pdfBuffer = await fs.readFile(filePath);
       const data = filing.filing_data as FilingData | null;
       const filename = data?.filing_id ? `${data.filing_id}.pdf` : `filing-${filing.id}.pdf`;
+
+      try {
+        await logAudit({
+          orgId: filing.org_id,
+          action: "filing.downloaded",
+          details: { filing_id: parsed.data.id },
+          ipAddress: getClientIp(request),
+          userAgent: getUserAgent(request),
+        });
+      } catch (auditError) {
+        console.error("[audit] Failed:", auditError);
+      }
 
       return new NextResponse(pdfBuffer, {
         headers: {

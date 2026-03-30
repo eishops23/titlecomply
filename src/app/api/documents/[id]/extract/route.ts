@@ -8,13 +8,14 @@ import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { extractTextFromPdf, readFile } from "@/lib/storage";
 import { planHasAiExtraction } from "@/lib/stripe";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -37,7 +38,7 @@ export async function POST(
         document_type: true,
         extraction_status: true,
         transaction: {
-          select: { org_id: true },
+          select: { id: true, org_id: true },
         },
       },
     });
@@ -119,6 +120,24 @@ export async function POST(
           extracted_at: new Date(),
         },
       });
+
+      try {
+        await logAudit({
+          orgId: document.transaction.org_id,
+          action: "document.extracted",
+          details: {
+            document_id: id,
+            extraction_type: extractionResult.type,
+            confidence: extractionResult.confidence,
+          },
+          transactionId: document.transaction.id,
+          ipAddress: getClientIp(request),
+          userAgent: getUserAgent(request),
+        });
+      } catch (auditError) {
+        console.error("[audit] Failed:", auditError);
+      }
+
       return NextResponse.json({ document: updated });
     } catch (extractError) {
       const errorMessage =

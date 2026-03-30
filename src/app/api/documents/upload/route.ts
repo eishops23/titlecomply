@@ -4,6 +4,7 @@ import { DocumentType, ExtractionStatus } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { storeFile } from "@/lib/storage";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     const transaction = await prisma.transaction.findFirst({
       where: { id: validated.data.transactionId, org_id: organization.id },
-      select: { id: true },
+      select: { id: true, org_id: true },
     });
     if (!transaction) {
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
@@ -60,6 +61,26 @@ export async function POST(request: NextRequest) {
         uploaded_by: user.id,
       },
     });
+
+    try {
+      await logAudit({
+        orgId: transaction.org_id,
+        userId: user.id,
+        action: "document.uploaded",
+        details: {
+          document_id: document.id,
+          file_name: stored.fileName,
+          file_type: stored.fileType,
+          file_size: stored.fileSize,
+          document_type: validated.data.documentType,
+        },
+        transactionId: validated.data.transactionId,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ document }, { status: 201 });
   } catch (error) {

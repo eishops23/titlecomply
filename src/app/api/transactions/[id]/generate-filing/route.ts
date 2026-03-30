@@ -9,6 +9,7 @@ import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { buildFilingData, generateFilingPdf } from "@/lib/filing-generator";
 import { validateTransaction, type ValidatableTransaction } from "@/lib/validation";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -137,6 +138,24 @@ export async function POST(
       where: { id: transaction.id },
       data: { status: TransactionStatus.FILED },
     });
+
+    try {
+      await logAudit({
+        orgId: transaction.org_id,
+        userId: user.id,
+        action: "filing.generated",
+        details: {
+          filing_id: filing.id,
+          filing_number: filingId,
+          property_address: transaction.property_address,
+        },
+        transactionId: transaction.id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ filing, filingId }, { status: 201 });
   } catch (error) {

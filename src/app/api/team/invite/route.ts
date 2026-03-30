@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/auth";
 import { canInviteTeamMember } from "@/lib/stripe";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,18 @@ export async function POST(request: NextRequest) {
         role,
       },
     });
+
+    try {
+      await logAudit({
+        orgId: organization.id,
+        action: "user.invited",
+        details: { email, role },
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {

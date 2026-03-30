@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
-import { logAudit } from "@/lib/audit";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -129,22 +129,19 @@ export async function PATCH(
       select: { id: true, collection_progress: true },
     });
 
-    await logAudit({
-      orgId: organization.id,
-      userId: user.id,
-      transactionId: updated.id,
-      action: "transaction.collect.updated",
-      details: {
-        updated_sections: [
-          payload.seller ? "seller" : null,
-          payload.settlementAgent ? "settlementAgent" : null,
-          payload.fileNumber !== undefined ? "file_number" : null,
-          payload.collectionProgress !== undefined ? "progress" : null,
-        ].filter(Boolean),
-      },
-      ipAddress: request.headers.get("x-forwarded-for"),
-      userAgent: request.headers.get("user-agent"),
-    });
+    try {
+      await logAudit({
+        orgId: organization.id,
+        userId: user.id,
+        action: "transaction.updated",
+        details: { updated_fields: Object.keys(payload) },
+        transactionId: updated.id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ transaction: updated });
   } catch (error) {
@@ -223,7 +220,7 @@ export async function DELETE(
 
     const transaction = await prisma.transaction.findFirst({
       where: { id: parsed.data.id, org_id: organization.id },
-      select: { id: true, status: true },
+      select: { id: true, status: true, org_id: true, property_address: true },
     });
     if (!transaction) {
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
@@ -234,15 +231,19 @@ export async function DELETE(
       data: { status: "ARCHIVED" },
     });
 
-    await logAudit({
-      orgId: organization.id,
-      userId: user.id,
-      transactionId: transaction.id,
-      action: "transaction.updated",
-      details: { archived: true, previous_status: transaction.status },
-      ipAddress: request.headers.get("x-forwarded-for"),
-      userAgent: request.headers.get("user-agent"),
-    });
+    try {
+      await logAudit({
+        orgId: transaction.org_id,
+        userId: user.id,
+        action: "transaction.archived",
+        details: { property_address: transaction.property_address },
+        transactionId: parsed.data.id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

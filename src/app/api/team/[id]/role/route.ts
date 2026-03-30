@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,9 @@ export async function PATCH(
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+    if (!user.org_id) {
+      return NextResponse.json({ error: "User organization not found" }, { status: 400 });
+    }
 
     if (user.role === "ADMIN" && role !== "ADMIN") {
       const adminCount = await prisma.user.count({
@@ -45,6 +49,18 @@ export async function PATCH(
       where: { id },
       data: { role },
     });
+
+    try {
+      await logAudit({
+        orgId: user.org_id,
+        action: "user.role_changed",
+        details: { user_id: id, from: user.role, to: role },
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ user: updated });
   } catch (error) {

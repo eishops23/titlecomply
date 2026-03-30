@@ -4,7 +4,7 @@ import { Prisma, BuyerType, FinancingStatus } from "@/generated/prisma/client";
 import { TransactionStatus } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { logAudit } from "@/lib/audit";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 import { canCreateTransaction, incrementTransactionCount } from "@/lib/stripe";
 
 const createTransactionSchema = z
@@ -128,22 +128,33 @@ export async function POST(request: NextRequest) {
                 },
               }),
       },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        org_id: true,
+        file_number: true,
+        property_address: true,
+        buyer_type: true,
+      },
     });
 
-    await logAudit({
-      orgId: organization.id,
-      userId: user.id,
-      transactionId: transaction.id,
-      action: "transaction.created",
-      details: {
-        source: "new_transaction_wizard",
-        buyer_type: payload.buyerType,
-        financing_status: payload.financingStatus,
-      },
-      ipAddress: request.headers.get("x-forwarded-for"),
-      userAgent: request.headers.get("user-agent"),
-    });
+    try {
+      await logAudit({
+        orgId: transaction.org_id,
+        userId: user.id,
+        action: "transaction.created",
+        details: {
+          file_number: transaction.file_number,
+          property_address: transaction.property_address,
+          buyer_type: transaction.buyer_type,
+        },
+        transactionId: transaction.id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     await incrementTransactionCount(organization.id);
 

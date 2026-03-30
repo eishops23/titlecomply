@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { TransactionStatus } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
-import { logAudit } from "@/lib/audit";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -64,15 +64,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       data: { status: newStatus as TransactionStatus },
     });
 
-    await logAudit({
-      orgId: organization.id,
-      userId: user.id,
-      transactionId: transaction.id,
-      action: "transaction.status_changed",
-      details: { from: transaction.status, to: newStatus },
-      ipAddress: request.headers.get("x-forwarded-for"),
-      userAgent: request.headers.get("user-agent"),
-    });
+    try {
+      await logAudit({
+        orgId: transaction.org_id,
+        userId: user.id,
+        action: "transaction.status_changed",
+        details: { from: transaction.status, to: newStatus },
+        transactionId: id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ transaction: updated });
   } catch (error) {

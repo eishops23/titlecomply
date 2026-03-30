@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { ScreeningResult, TransactionStatus } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { logAudit } from "@/lib/audit";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 import { runScreening, type PropertyType } from "@/lib/screening";
 
 const screenRequestSchema = z.object({
@@ -75,6 +75,7 @@ export async function POST(
       where: { id, org_id: organization.id },
       select: {
         id: true,
+        org_id: true,
         buyer_type: true,
         financing_status: true,
         purchase_price: true,
@@ -136,19 +137,23 @@ export async function POST(
       },
     });
 
-    await logAudit({
-      orgId: organization.id,
-      userId: user.id,
-      transactionId: updated.id,
-      action: "transaction.screened",
-      details: {
-        result: updated.screening_result,
-        status: updated.status,
-        override: Boolean(parsedBody.data.overrideResult),
-      },
-      ipAddress: request.headers.get("x-forwarded-for"),
-      userAgent: request.headers.get("user-agent"),
-    });
+    try {
+      await logAudit({
+        orgId: transaction.org_id,
+        userId: user.id,
+        action: "transaction.screened",
+        details: {
+          result: updated.screening_result,
+          status: updated.status,
+          override: Boolean(parsedBody.data.overrideResult),
+        },
+        transactionId: updated.id,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ screening: updated });
   } catch (error) {

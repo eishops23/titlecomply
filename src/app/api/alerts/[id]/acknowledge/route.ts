@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -12,7 +13,7 @@ export async function POST(
 
     const alert = await prisma.alert.findUnique({
       where: { id },
-      select: { id: true, org_id: true, acknowledged: true },
+      select: { id: true, org_id: true, type: true, acknowledged: true },
     });
 
     if (!alert) {
@@ -34,6 +35,18 @@ export async function POST(
         acknowledged_at: new Date(),
       },
     });
+
+    try {
+      await logAudit({
+        orgId: alert.org_id,
+        action: "alert.acknowledged",
+        details: { alert_id: id, alert_type: alert.type },
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ alert: updated });
   } catch (error) {

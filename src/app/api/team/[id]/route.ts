@@ -1,10 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 export async function DELETE(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -17,6 +18,9 @@ export async function DELETE(
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    if (!user.org_id) {
+      return NextResponse.json({ error: "User organization not found" }, { status: 400 });
     }
 
     if (user.role === "ADMIN") {
@@ -37,6 +41,18 @@ export async function DELETE(
     });
 
     await prisma.user.delete({ where: { id } });
+
+    try {
+      await logAudit({
+        orgId: user.org_id,
+        action: "user.removed",
+        details: { email: user.email, role: user.role },
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

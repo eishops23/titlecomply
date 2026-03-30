@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,18 @@ export async function PATCH(request: NextRequest) {
       where: { id: org.id },
       data: validated,
     });
+
+    try {
+      await logAudit({
+        orgId: org.id,
+        action: "settings.updated",
+        details: { updated_fields: Object.keys(validated) },
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+    } catch (auditError) {
+      console.error("[audit] Failed:", auditError);
+    }
 
     return NextResponse.json({ organization: updated });
   } catch (error) {

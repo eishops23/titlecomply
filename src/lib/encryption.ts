@@ -1,41 +1,95 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import * as crypto from "crypto";
 
-const ALGO = "aes-256-gcm";
-const PREFIX = "enc:v1";
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 12;
+const TAG_LENGTH = 16;
+const ENCODING = "base64";
+const FORMAT_VERSION = "v1";
+const FORMAT_PREFIX = "enc";
 
-function resolveKey(): Buffer {
-  const raw = process.env.ENCRYPTION_KEY ?? process.env.DATABASE_URL ?? "dev-only-key";
-  return createHash("sha256").update(raw).digest();
+function getEncryptionKey(): Buffer {
+  const masterKey = process.env.ENCRYPTION_MASTER_KEY;
+  if (masterKey) {
+    if (masterKey.length === 64) {
+      return Buffer.from(masterKey, "hex");
+    }
+    return crypto.createHash("sha256").update(masterKey).digest();
+  }
+
+  const fallback =
+    process.env.CLERK_SECRET_KEY || "titlecomply-default-key-change-me";
+  return crypto.createHash("sha256").update(fallback).digest();
 }
 
 export function encrypt(plaintext: string): string {
-  if (!plaintext) return "";
-  const key = resolveKey();
-  const iv = randomBytes(12);
-  const cipher = createCipheriv(ALGO, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  if (!plaintext) return plaintext;
+
+  if (plaintext.startsWith(`${FORMAT_PREFIX}:${FORMAT_VERSION}:`)) {
+    return plaintext;
+  }
+
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+
+  let ciphertext = cipher.update(plaintext, "utf8", ENCODING);
+  ciphertext += cipher.final(ENCODING);
   const tag = cipher.getAuthTag();
-  return `${PREFIX}:${iv.toString("base64url")}:${encrypted.toString("base64url")}:${tag.toString("base64url")}`;
+
+  return `${FORMAT_PREFIX}:${FORMAT_VERSION}:${iv.toString(ENCODING)}:${ciphertext}:${tag.toString(ENCODING)}`;
 }
 
-export function decrypt(ciphertext: string): string {
-  if (!ciphertext) return "";
-  if (!ciphertext.startsWith(`${PREFIX}:`)) {
-    return ciphertext;
+export function decrypt(encrypted: string): string {
+  if (!encrypted) return encrypted;
+
+  if (!encrypted.startsWith(`${FORMAT_PREFIX}:${FORMAT_VERSION}:`)) {
+    return encrypted;
   }
 
-  const [prefix, version, ivPart, contentPart, tagPart] = ciphertext.split(":");
-  if (prefix !== "enc" || version !== "v1" || !ivPart || !contentPart || !tagPart) {
-    throw new Error("Invalid encrypted payload format");
+  const parts = encrypted.split(":");
+  if (parts.length !== 5) {
+    throw new Error("Invalid encrypted format: expected enc:v1:iv:ciphertext:tag");
   }
 
-  const key = resolveKey();
-  const iv = Buffer.from(ivPart, "base64url");
-  const content = Buffer.from(contentPart, "base64url");
-  const tag = Buffer.from(tagPart, "base64url");
+  const [, , ivB64, ciphertextB64, tagB64] = parts;
 
-  const decipher = createDecipheriv(ALGO, key, iv);
-  decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(content), decipher.final()]);
-  return plain.toString("utf8");
+  try {
+    const key = getEncryptionKey();
+    const iv = Buffer.from(ivB64, ENCODING);
+    const tag = Buffer.from(tagB64, ENCODING);
+
+    if (tag.length !== TAG_LENGTH) {
+      throw new Error("Invalid auth tag length");
+    }
+
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    decipher.setAuthTag(tag);
+
+    let plaintext = decipher.update(ciphertextB64, ENCODING, "utf8");
+    plaintext += decipher.final("utf8");
+    return plaintext;
+  } catch (error) {
+    throw new Error(
+      `Decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
+export function isEncrypted(value: string): boolean {
+  return value.startsWith(`${FORMAT_PREFIX}:${FORMAT_VERSION}:`);
+}
+
+export function maskValue(value: string | null, showLast: number = 4): string {
+  if (!value) return "—";
+  try {
+    const plain = isEncrypted(value) ? decrypt(value) : value;
+    if (plain.length <= showLast) return "***";
+    return "•".repeat(plain.length - showLast) + plain.slice(-showLast);
+  } catch {
+    return "***";
+  }
+}
+
+export function generateMasterKey(): string {
+  return crypto.randomBytes(32).toString("hex");
 }
