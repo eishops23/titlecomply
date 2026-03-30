@@ -173,12 +173,24 @@ export async function GET(
     const transaction = await prisma.transaction.findFirst({
       where: { id: parsed.data.id, org_id: organization.id },
       include: {
+        organization: true,
+        beneficial_owners: {
+          orderBy: { created_at: "asc" },
+        },
         documents: {
+          orderBy: { created_at: "desc" },
+        },
+        filings: {
           orderBy: { created_at: "desc" },
         },
         entity_detail: true,
         trust_detail: true,
-        beneficial_owners: true,
+        assigned_to: {
+          select: { id: true, first_name: true, last_name: true, email: true },
+        },
+        created_by: {
+          select: { id: true, first_name: true, last_name: true, email: true },
+        },
       },
     });
     if (!transaction) {
@@ -189,6 +201,53 @@ export async function GET(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch transaction";
+    const status =
+      message === "Unauthorized" || message === "Organization required" ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { user, organization } = await resolveUser();
+    const parsed = paramsSchema.safeParse(await context.params);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", issues: parsed.error.flatten() },
+        { status: 400 },
+      );
+    }
+
+    const transaction = await prisma.transaction.findFirst({
+      where: { id: parsed.data.id, org_id: organization.id },
+      select: { id: true, status: true },
+    });
+    if (!transaction) {
+      return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
+    }
+
+    await prisma.transaction.update({
+      where: { id: transaction.id },
+      data: { status: "ARCHIVED" },
+    });
+
+    await logAudit({
+      orgId: organization.id,
+      userId: user.id,
+      transactionId: transaction.id,
+      action: "transaction.updated",
+      details: { archived: true, previous_status: transaction.status },
+      ipAddress: request.headers.get("x-forwarded-for"),
+      userAgent: request.headers.get("user-agent"),
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to archive transaction";
     const status =
       message === "Unauthorized" || message === "Organization required" ? 401 : 500;
     return NextResponse.json({ error: message }, { status });
