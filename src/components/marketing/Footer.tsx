@@ -33,6 +33,14 @@ export function Footer() {
                   Pricing
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/tools/ofac-screening"
+                  className="text-sm text-gray-400 transition-colors hover:text-white"
+                >
+                  OFAC Screening Tool
+                </Link>
+              </li>
             </ul>
           </div>
 

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple, transparent pricing for FinCEN compliance automation. Starter $199/mo, Professional $499/mo, Enterprise $999/mo. 14-day free trial on every plan.",
+    "Simple, transparent pricing for the title compliance platform: FinCEN, OFAC, wire fraud prevention, and 1099-S reporting.",
   alternates: { canonical: "https://titlecomply.com/pricing" },
 };
 
@@ -147,6 +147,27 @@ export default function PricingPage() {
               <td className="px-4 py-4">
                 <Dash />
               </td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-4 pr-4">OFAC screening</td>
+              <td className="px-4 py-4"><Check /></td>
+              <td className="bg-blue-50/30 px-4 py-4"><Check /></td>
+              <td className="px-4 py-4"><Check /></td>
+              <td className="px-4 py-4"><Check /></td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-4 pr-4">Wire fraud prevention</td>
+              <td className="px-4 py-4"><Check /></td>
+              <td className="bg-blue-50/30 px-4 py-4"><Check /></td>
+              <td className="px-4 py-4"><Check /></td>
+              <td className="px-4 py-4"><Check /></td>
+            </tr>
+            <tr className="border-b border-gray-100">
+              <td className="py-4 pr-4">1099-S reporting</td>
+              <td className="px-4 py-4"><Dash /></td>
+              <td className="bg-blue-50/30 px-4 py-4"><Check /></td>
+              <td className="px-4 py-4"><Check /></td>
+              <td className="px-4 py-4"><Dash /></td>
             </tr>
             <tr className="border-b border-gray-100">
               <td className="py-4 pr-4">API access</td>

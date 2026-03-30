@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldAlert,
   ArrowLeftRight,
+  FileSpreadsheet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +23,7 @@ const nav = [
   { href: "/filings", label: "Filings", icon: FileText },
   { href: "/alerts", label: "Alerts", icon: ShieldAlert },
   { href: "/reports", label: "Reports", icon: BarChart2 },
+  { href: "/reports/1099s", label: "1099-S Reporting", icon: FileSpreadsheet },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 

@@ -25,7 +25,7 @@ type TransactionDetailPayload = Prisma.TransactionGetPayload<{
   };
 }>;
 
-type TabKey = "overview" | "collection" | "documents" | "filing" | "audit";
+type TabKey = "overview" | "collection" | "documents" | "ofac" | "wires" | "filing" | "audit";
 
 export function TransactionDetail({ transaction }: { transaction: TransactionDetailPayload }) {
   const [activeTab, setActiveTab] = React.useState<TabKey>("overview");
@@ -53,6 +53,8 @@ export function TransactionDetail({ transaction }: { transaction: TransactionDet
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="collection">Data Collection</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="ofac">OFAC</TabsTrigger>
+          <TabsTrigger value="wires">Wires</TabsTrigger>
           <TabsTrigger value="filing">Filing</TabsTrigger>
           <TabsTrigger value="audit">Audit Trail</TabsTrigger>
         </TabsList>
@@ -157,6 +159,34 @@ export function TransactionDetail({ transaction }: { transaction: TransactionDet
                   </Link>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ofac">
+          <Card>
+            <CardHeader>
+              <CardTitle>OFAC Screening</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted">Screen every party against OFAC sanctions and generate a compliance certificate.</p>
+              <Link href={`/transactions/${transaction.id}/ofac`} className="mt-2 inline-block text-accent hover:underline">
+                Open OFAC Screening →
+              </Link>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="wires">
+          <Card>
+            <CardHeader>
+              <CardTitle>Wire Fraud Prevention</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted">Verify wire instructions, flag risky changes, and collect confirmations before releasing funds.</p>
+              <Link href={`/transactions/${transaction.id}/wires`} className="mt-2 inline-block text-accent hover:underline">
+                Open Wire Verification →
+              </Link>
             </CardContent>
           </Card>
         </TabsContent>

@@ -3,13 +3,16 @@ import Link from "next/link";
 import {
   Bell,
   ClipboardList,
+  FileSpreadsheet,
   FileCheck,
   FileSearch,
   FileText,
   HardDrive,
   Lock,
+  ShieldAlert,
   Shield,
   ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
 import { MarketingFaq } from "@/components/marketing/MarketingFaq";
 import { PricingCards } from "@/components/marketing/PricingCards";
@@ -21,7 +24,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "FinCEN Compliance Automation for Title & Escrow | TitleComply",
   description:
-    "Every title company must now file FinCEN Real Estate Reports on cash-to-entity transactions. TitleComply automates the entire process — from screening to filing — in 15 minutes.",
+    "The compliance platform for title companies — FinCEN, OFAC, wire fraud prevention, and 1099-S in one place.",
   alternates: { canonical: "https://titlecomply.com" },
 };
 
@@ -43,6 +46,9 @@ const softwareSchema = {
   },
   featureList: [
     "FinCEN screening engine",
+    "OFAC sanctions screening",
+    "Wire fraud prevention",
+    "1099-S reporting",
     "Guided data collection",
     "AI document extraction",
     "One-click report generation",
@@ -142,6 +148,21 @@ const featureCards = [
     title: "Automated Reminders",
     body: "Never miss a filing deadline. Automatic email reminders for missing data, overdue filings, and approaching deadlines keep your team on track.",
   },
+  {
+    Icon: ShieldAlert,
+    title: "OFAC Sanctions Screening",
+    body: "Instantly screen all transaction parties against OFAC lists with timestamped certificates.",
+  },
+  {
+    Icon: TriangleAlert,
+    title: "Wire Fraud Prevention",
+    body: "Detect suspicious wire changes and require multi-party confirmation before funds are sent.",
+  },
+  {
+    Icon: FileSpreadsheet,
+    title: "1099-S Reporting",
+    body: "Generate and export 1099-S filings from your existing transaction data for year-end reporting.",
+  },
 ];
 
 export default function HomePage() {
@@ -153,12 +174,11 @@ export default function HomePage() {
       <section className="bg-white pb-20 pt-24 md:pb-28 md:pt-32">
         <div className="mx-auto max-w-7xl px-6">
           <h1 className="text-center text-5xl font-bold leading-[1.1] tracking-tight text-[#0F172A] md:text-6xl">
-            FinCEN compliance on autopilot for title & escrow.
+            The compliance platform for title companies.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-center text-lg leading-relaxed text-gray-500 md:text-xl">
-            Every title company in America must now file FinCEN Real Estate
-            Reports on cash-to-entity transactions. TitleComply automates the
-            entire process — from screening to filing — in 15 minutes.
+            FinCEN, OFAC, wire fraud prevention, and 1099-S reporting in one
+            workflow built for title and escrow teams.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
             <Link

@@ -118,6 +118,8 @@ export const PLAN_PRICING: Record<
     users: "2",
     features: [
       "Screening engine",
+      "OFAC screening",
+      "Wire fraud prevention",
       "Data collection",
       "Filing generation",
       "Audit trail",
@@ -132,6 +134,7 @@ export const PLAN_PRICING: Record<
     features: [
       "Everything in Starter",
       "AI document extraction",
+      "1099-S reporting",
       "Priority support",
     ],
   },
@@ -157,6 +160,8 @@ export const PLAN_PRICING: Record<
     users: "1",
     features: [
       "Screening engine",
+      "OFAC screening",
+      "Wire fraud prevention",
       "Data collection",
       "Filing generation",
       "Audit trail",
