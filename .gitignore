@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Document uploads (local storage — not committed)
 /uploads/
+
+# Generated filing PDFs (local storage)
+/filings/
