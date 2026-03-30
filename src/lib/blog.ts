@@ -1,3 +1,7 @@
+import fs from "fs/promises";
+import path from "path";
+import type { GeneratedBlogPost } from "./autoblog";
+
 export interface BlogPost {
   slug: string;
   title: string;
@@ -136,10 +140,104 @@ const post3: BlogPost = {
 `.trim(),
 };
 
+const GENERATED_POSTS_DIR = path.join(process.cwd(), "content", "blog");
+
+let generatedPostsCache: BlogPost[] = [];
+
+function generatedToBlogPost(post: GeneratedBlogPost): BlogPost {
+  return {
+    slug: post.slug,
+    title: post.title,
+    description: post.description,
+    content: post.content,
+    author: post.author,
+    authorTitle: post.authorTitle,
+    publishedAt: post.publishedAt,
+    readingTime: post.readingTime,
+    tags: post.tags,
+  };
+}
+
 export function getBlogPosts(): BlogPost[] {
-  return [post1, post2, post3];
+  const staticPosts = [post1, post2, post3];
+  return [...staticPosts, ...generatedPostsCache].sort(
+    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+  );
 }
 
 export function getBlogPost(slug: string): BlogPost | undefined {
   return getBlogPosts().find((p) => p.slug === slug);
 }
+
+export async function loadGeneratedPosts(): Promise<void> {
+  try {
+    await fs.mkdir(GENERATED_POSTS_DIR, { recursive: true });
+    const files = await fs.readdir(GENERATED_POSTS_DIR);
+    const posts: BlogPost[] = [];
+
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const raw = await fs.readFile(path.join(GENERATED_POSTS_DIR, file), "utf-8");
+        const post = JSON.parse(raw) as GeneratedBlogPost;
+        if (post.status === "published") {
+          posts.push(generatedToBlogPost(post));
+        }
+      } catch {
+        // Skip malformed files
+      }
+    }
+
+    generatedPostsCache = posts;
+  } catch {
+    generatedPostsCache = [];
+  }
+}
+
+export async function saveGeneratedPost(post: GeneratedBlogPost): Promise<void> {
+  await fs.mkdir(GENERATED_POSTS_DIR, { recursive: true });
+  const filePath = path.join(GENERATED_POSTS_DIR, `${post.id}.json`);
+  await fs.writeFile(filePath, JSON.stringify(post, null, 2));
+}
+
+export async function getGeneratedPosts(): Promise<GeneratedBlogPost[]> {
+  try {
+    await fs.mkdir(GENERATED_POSTS_DIR, { recursive: true });
+    const files = await fs.readdir(GENERATED_POSTS_DIR);
+    const posts: GeneratedBlogPost[] = [];
+
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const raw = await fs.readFile(path.join(GENERATED_POSTS_DIR, file), "utf-8");
+        posts.push(JSON.parse(raw) as GeneratedBlogPost);
+      } catch {
+        /* skip */
+      }
+    }
+
+    return posts.sort(
+      (a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime(),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export async function getGeneratedPostById(id: string): Promise<GeneratedBlogPost | null> {
+  try {
+    const filePath = path.join(GENERATED_POSTS_DIR, `${id}.json`);
+    const raw = await fs.readFile(filePath, "utf-8");
+    return JSON.parse(raw) as GeneratedBlogPost;
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteGeneratedPost(id: string): Promise<void> {
+  const filePath = path.join(GENERATED_POSTS_DIR, `${id}.json`);
+  await fs.unlink(filePath).catch(() => {});
+  await loadGeneratedPosts();
+}
+
+void loadGeneratedPosts().catch(() => {});

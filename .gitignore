@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Generated filing PDFs (local storage)
 /filings/
+
+# Generated blog posts
+/content/
