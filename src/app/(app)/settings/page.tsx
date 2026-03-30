@@ -1,10 +1,14 @@
+import { prisma } from "@/lib/db";
+import { SettingsLayout } from "@/components/settings/SettingsLayout";
+import { SettingsClient } from "./settings-client";
+
 export const dynamic = "force-dynamic";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const organization = await prisma.organization.findFirst();
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-      <p className="mt-2 text-muted">Organization settings will appear here.</p>
-    </div>
+    <SettingsLayout activePage="organization">
+      <SettingsClient organization={organization} />
+    </SettingsLayout>
   );
 }
