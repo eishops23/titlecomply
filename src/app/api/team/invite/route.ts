@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { resolveUser } from "@/lib/auth";
 import { canInviteTeamMember } from "@/lib/stripe";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
+import { sendTeamInvitationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ const inviteSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { organization } = await resolveUser();
+    const { organization, user: invitingUser } = await resolveUser();
     const body = await request.json();
     const { email, role } = inviteSchema.parse(body);
 
@@ -48,6 +49,20 @@ export async function POST(request: NextRequest) {
         role,
       },
     });
+
+    const invitedBy =
+      [invitingUser.first_name, invitingUser.last_name].filter(Boolean).join(" ") ||
+      "Team Admin";
+
+    try {
+      await sendTeamInvitationEmail(email, {
+        orgName: organization.name,
+        role,
+        invitedBy,
+      });
+    } catch (emailError) {
+      console.error("[email] Failed to send team_invitation:", emailError);
+    }
 
     try {
       await logAudit({

@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { buildFilingData, generateFilingPdf } from "@/lib/filing-generator";
 import { validateTransaction, type ValidatableTransaction } from "@/lib/validation";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
+import { sendFilingGeneratedEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -155,6 +156,44 @@ export async function POST(
       });
     } catch (auditError) {
       console.error("[audit] Failed:", auditError);
+    }
+
+    try {
+      const admins = await prisma.user.findMany({
+        where: { org_id: transaction.org_id, role: "ADMIN" },
+        select: { email: true, first_name: true },
+      });
+      const creator = await prisma.user.findUnique({
+        where: { id: transaction.created_by_id },
+        select: { email: true, first_name: true },
+      });
+
+      const recipients = new Set<string>();
+      const nameByEmail = new Map<string, string>();
+      for (const admin of admins) {
+        if (admin.email) {
+          recipients.add(admin.email);
+          nameByEmail.set(admin.email, admin.first_name || "Team Member");
+        }
+      }
+      if (creator?.email) {
+        recipients.add(creator.email);
+        if (!nameByEmail.has(creator.email)) {
+          nameByEmail.set(creator.email, creator.first_name || "Team Member");
+        }
+      }
+
+      for (const email of recipients) {
+        const recipientName = nameByEmail.get(email) ?? "Team Member";
+        await sendFilingGeneratedEmail(email, {
+          recipientName,
+          propertyAddress: transaction.property_address,
+          filingId,
+          transactionId: transaction.id,
+        });
+      }
+    } catch (emailError) {
+      console.error("[email] Failed to send filing_generated:", emailError);
     }
 
     return NextResponse.json({ filing, filingId }, { status: 201 });

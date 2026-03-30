@@ -5,6 +5,7 @@ import { ScreeningResult, TransactionStatus } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
+import { sendScreeningCompleteEmail } from "@/lib/email";
 import { runScreening, type PropertyType } from "@/lib/screening";
 
 const screenRequestSchema = z.object({
@@ -76,6 +77,8 @@ export async function POST(
       select: {
         id: true,
         org_id: true,
+        created_by_id: true,
+        property_address: true,
         buyer_type: true,
         financing_status: true,
         purchase_price: true,
@@ -153,6 +156,24 @@ export async function POST(
       });
     } catch (auditError) {
       console.error("[audit] Failed:", auditError);
+    }
+
+    try {
+      const creator = await prisma.user.findUnique({
+        where: { id: transaction.created_by_id },
+        select: { email: true, first_name: true },
+      });
+      if (creator?.email) {
+        await sendScreeningCompleteEmail(creator.email, {
+          recipientName: creator.first_name || "Team Member",
+          propertyAddress: transaction.property_address,
+          result: String(updated.screening_result),
+          reason: updated.screening_reason || "",
+          transactionId: transaction.id,
+        });
+      }
+    } catch (emailError) {
+      console.error("[email] Failed to send screening_complete:", emailError);
     }
 
     return NextResponse.json({ screening: updated });

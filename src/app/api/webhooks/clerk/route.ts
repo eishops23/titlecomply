@@ -7,6 +7,7 @@ import { verifyWebhook } from "@clerk/nextjs/webhooks";
 import { NextResponse, type NextRequest } from "next/server";
 import { UserRole } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
+import { sendWelcomeEmail } from "@/lib/email";
 
 function mapClerkRoleToUserRole(clerkRole: string): UserRole {
   if (clerkRole === "org:admin") {
@@ -64,6 +65,15 @@ export async function POST(req: NextRequest) {
             last_name: data.last_name,
           },
         });
+        try {
+          const name =
+            data.first_name?.trim() ||
+            email.split("@")[0] ||
+            "there";
+          await sendWelcomeEmail(email, name);
+        } catch (emailError) {
+          console.error("[email] Failed to send welcome:", emailError);
+        }
         break;
       }
       case "organization.created": {

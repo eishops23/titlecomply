@@ -6,6 +6,7 @@ import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getClientIp, getUserAgent, logAudit } from "@/lib/audit";
 import { canCreateTransaction, incrementTransactionCount } from "@/lib/stripe";
+import { sendTransactionCreatedEmail } from "@/lib/email";
 
 const createTransactionSchema = z
   .object({
@@ -132,6 +133,7 @@ export async function POST(request: NextRequest) {
         id: true,
         status: true,
         org_id: true,
+        assigned_to_id: true,
         file_number: true,
         property_address: true,
         buyer_type: true,
@@ -154,6 +156,25 @@ export async function POST(request: NextRequest) {
       });
     } catch (auditError) {
       console.error("[audit] Failed:", auditError);
+    }
+
+    if (transaction.assigned_to_id) {
+      try {
+        const assignee = await prisma.user.findUnique({
+          where: { id: transaction.assigned_to_id },
+          select: { email: true, first_name: true },
+        });
+        if (assignee?.email) {
+          await sendTransactionCreatedEmail(assignee.email, {
+            recipientName: assignee.first_name || "Team Member",
+            propertyAddress: transaction.property_address,
+            fileNumber: transaction.file_number,
+            transactionId: transaction.id,
+          });
+        }
+      } catch (emailError) {
+        console.error("[email] Failed to send transaction_created:", emailError);
+      }
     }
 
     await incrementTransactionCount(organization.id);
