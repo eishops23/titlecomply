@@ -5,6 +5,7 @@ import { TransactionStatus } from "@/generated/prisma/enums";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
+import { canCreateTransaction, incrementTransactionCount } from "@/lib/stripe";
 
 const createTransactionSchema = z
   .object({
@@ -55,6 +56,18 @@ const createTransactionSchema = z
 export async function POST(request: NextRequest) {
   try {
     const { user, organization } = await resolveUser();
+    const limitCheck = await canCreateTransaction(organization.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: limitCheck.message,
+          current: limitCheck.current,
+          limit: limitCheck.limit,
+        },
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const parsed = createTransactionSchema.safeParse(body);
     if (!parsed.success) {
@@ -131,6 +144,8 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get("x-forwarded-for"),
       userAgent: request.headers.get("user-agent"),
     });
+
+    await incrementTransactionCount(organization.id);
 
     return NextResponse.json({ transaction }, { status: 201 });
   } catch (error) {

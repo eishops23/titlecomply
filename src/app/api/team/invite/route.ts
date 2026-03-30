@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { PLAN_USER_LIMITS } from "@/lib/constants";
+import { resolveUser } from "@/lib/auth";
+import { canInviteTeamMember } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -14,29 +15,22 @@ const inviteSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const { organization } = await resolveUser();
     const body = await request.json();
     const { email, role } = inviteSchema.parse(body);
 
-    const org = await prisma.organization.findFirst({
-      include: { users: { select: { id: true } } },
-    });
-
-    if (!org) {
-      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
-    }
-
-    const limit = PLAN_USER_LIMITS[org.plan] ?? 2;
-    if (org.users.length >= limit) {
+    const limitCheck = await canInviteTeamMember(organization.id);
+    if (!limitCheck.allowed) {
       return NextResponse.json(
         {
-          error: `Team member limit reached (${limit} on ${org.plan} plan). Upgrade to add more members.`,
+          error: limitCheck.message,
         },
         { status: 403 },
       );
     }
 
     const existing = await prisma.user.findFirst({
-      where: { org_id: org.id, email },
+      where: { org_id: organization.id, email },
     });
     if (existing) {
       return NextResponse.json(
@@ -47,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.create({
       data: {
-        org_id: org.id,
+        org_id: organization.id,
         clerk_user_id: `pending_${Date.now()}`,
         email,
         role,
@@ -62,7 +56,9 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    console.error("[team/invite] Error:", error);
-    return NextResponse.json({ error: "Invitation failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Invitation failed";
+    const status =
+      message === "Unauthorized" || message === "Organization required" ? 401 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

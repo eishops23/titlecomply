@@ -85,6 +85,13 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
 
 export const PER_FILE_PRICE_USD = 29;
 
+export const STRIPE_PRICE_IDS = {
+  STARTER: process.env.STRIPE_PRICE_STARTER ?? "",
+  PROFESSIONAL: process.env.STRIPE_PRICE_PROFESSIONAL ?? "",
+  ENTERPRISE: process.env.STRIPE_PRICE_ENTERPRISE ?? "",
+  PAY_PER_FILE: process.env.STRIPE_PRICE_PER_FILE ?? "",
+} as const;
+
 export const PLAN_USER_LIMITS: Record<PlanId, number> = {
   STARTER: 2,
   PROFESSIONAL: 10,

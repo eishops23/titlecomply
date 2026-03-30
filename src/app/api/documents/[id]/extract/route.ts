@@ -7,6 +7,7 @@ import { extractFromDocument, extractFromImage } from "@/lib/claude";
 import { resolveUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { extractTextFromPdf, readFile } from "@/lib/storage";
+import { planHasAiExtraction } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,9 @@ export async function POST(
         file_type: true,
         document_type: true,
         extraction_status: true,
+        transaction: {
+          select: { org_id: true },
+        },
       },
     });
     if (!document) {
@@ -43,6 +47,20 @@ export async function POST(
 
     if (document.extraction_status === ExtractionStatus.PROCESSING) {
       return NextResponse.json({ error: "Extraction already in progress" }, { status: 409 });
+    }
+
+    const org = await prisma.organization.findUnique({
+      where: { id: document.transaction.org_id },
+      select: { plan: true },
+    });
+    if (org && !planHasAiExtraction(org.plan)) {
+      return NextResponse.json(
+        {
+          error:
+            "AI document extraction requires a Professional or Enterprise plan. Upgrade to access this feature.",
+        },
+        { status: 403 },
+      );
     }
 
     await prisma.document.update({

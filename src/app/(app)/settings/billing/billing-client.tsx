@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +13,7 @@ type BillingOrg = {
   plan: "STARTER" | "PROFESSIONAL" | "ENTERPRISE" | "PAY_PER_FILE";
   monthly_transaction_count: number;
   trial_ends_at: Date | string | null;
+  stripe_customer_id?: string | null;
   users: { id: string }[];
 };
 
@@ -21,6 +24,68 @@ function usageColorClass(percent: number): string {
 }
 
 export function BillingClient({ organization }: { organization: BillingOrg | null }) {
+  const searchParams = useSearchParams();
+  const success = searchParams.get("success");
+  const cancelled = searchParams.get("cancelled");
+  const [isLoading, setIsLoading] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (success) {
+      setBannerMessage("Subscription activated!");
+      return;
+    }
+    if (cancelled) {
+      setBannerMessage("Checkout cancelled.");
+      return;
+    }
+    setBannerMessage(null);
+  }, [success, cancelled]);
+
+  async function handleUpgrade(planId: BillingOrg["plan"]) {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId,
+          successUrl: `${window.location.origin}/settings/billing?success=true`,
+          cancelUrl: `${window.location.origin}/settings/billing?cancelled=true`,
+        }),
+      });
+      const data = (await res.json()) as { url?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleManageBilling() {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          returnUrl: `${window.location.origin}/settings/billing`,
+        }),
+      });
+      const data = (await res.json()) as { url?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error("Portal error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   if (!organization) {
     return <p className="text-sm text-muted">Organization not found.</p>;
   }
@@ -45,6 +110,14 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
 
   return (
     <div className="space-y-4">
+      {bannerMessage ? (
+        <Card>
+          <CardContent className="py-3">
+            <p className="text-sm text-foreground">{bannerMessage}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>Current Plan</CardTitle>
@@ -87,10 +160,17 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
           {trialLabel ? <p className="text-sm text-muted">{trialLabel}</p> : null}
 
           <div className="flex flex-wrap gap-2">
-            <Link href="/pricing">
-              <Button>Upgrade Plan</Button>
-            </Link>
-            <Button variant="secondary" disabled title="Stripe billing will be configured soon">
+            <Button
+              onClick={() => handleUpgrade("PROFESSIONAL")}
+              disabled={isLoading}
+            >
+              Upgrade Plan
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleManageBilling}
+              disabled={isLoading || !organization.stripe_customer_id}
+            >
               Manage Billing
             </Button>
           </div>
@@ -104,6 +184,7 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {Object.entries(PLAN_PRICING).map(([planId, plan]) => {
             const isCurrent = planId === organization.plan;
+            const typedPlanId = planId as BillingOrg["plan"];
             return (
               <div
                 key={planId}
@@ -132,8 +213,8 @@ export function BillingClient({ organization }: { organization: BillingOrg | nul
                     <Button
                       size="sm"
                       variant="secondary"
-                      disabled
-                      title="Stripe upgrade actions will be configured soon"
+                      disabled={isLoading}
+                      onClick={() => handleUpgrade(typedPlanId)}
                     >
                       Upgrade
                     </Button>
