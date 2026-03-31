@@ -21,12 +21,16 @@ export function UrgencyBanner() {
   return (
     <div className="relative bg-[#0F172A] px-6 py-2.5 text-center text-sm text-white">
       <div className="mx-auto flex max-w-7xl items-center justify-center pr-10">
+        <span className="relative mr-2 flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+        </span>
         <AlertTriangle className="mr-2 inline h-4 w-4 shrink-0 text-amber-400" />
         <p className="text-sm text-gray-200">
-          FinCEN&apos;s Real Estate Report rule is{" "}
-          <span className="font-semibold text-white">NOW IN EFFECT</span>. Every
-          unfiled transaction is a potential{" "}
-          <span className="font-semibold text-white">$50,000 violation</span>.
+          FinCEN&apos;s Real Estate Report rule took effect March 1, 2026. Title
+          companies must file on every non-financed entity transaction.
+          Penalties start at{" "}
+          <span className="font-semibold text-white">$50,000 per violation</span>.
           <Link
             href="#roi-calculator"
             className="ml-2 font-semibold text-amber-400 underline underline-offset-2 transition-colors hover:text-amber-300"

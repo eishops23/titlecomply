@@ -13,10 +13,14 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { FreeToolsBanner } from "@/components/marketing/FreeToolsBanner";
+import { WhoItsFor } from "@/components/marketing/WhoItsFor";
+import { RegulatoryBadges } from "@/components/marketing/RegulatoryBadges";
+import { EnterpriseProof } from "@/components/marketing/EnterpriseProof";
 import { LeadCapture } from "@/components/marketing/LeadCapture";
 import { MarketingFaq } from "@/components/marketing/MarketingFaq";
 import { ProductDemo } from "@/components/marketing/ProductDemo";
 import { PricingCards } from "@/components/marketing/PricingCards";
+import { ComplianceAssessment } from "@/components/marketing/ComplianceAssessment";
 import { RoiCalculator } from "@/components/marketing/RoiCalculator";
 import { SocialProof } from "@/components/marketing/SocialProof";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -204,6 +208,7 @@ export default function HomePage() {
       </section>
 
       <ProductDemo />
+      <WhoItsFor />
 
       <section className="bg-gray-50/50 py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-6">
@@ -313,7 +318,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      <RegulatoryBadges />
+
       <FreeToolsBanner />
+
+      <EnterpriseProof />
 
       <SocialProof />
 
@@ -335,6 +344,8 @@ export default function HomePage() {
           </p>
         </div>
       </section>
+
+      <ComplianceAssessment />
 
       <RoiCalculator />
 

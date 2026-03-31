@@ -4,20 +4,22 @@ export function SocialProof() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="grid grid-cols-1 gap-8 text-center md:grid-cols-3">
           <div>
+            <p className="text-4xl font-bold text-[#1E3A5F]">March 1, 2026</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Rule effective date - every title company is now required to file
+            </p>
+          </div>
+          <div>
+            <p className="text-4xl font-bold text-[#1E3A5F]">$50,000+</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Per-violation federal penalty for failure to file
+            </p>
+          </div>
+          <div>
             <p className="text-4xl font-bold text-[#1E3A5F]">15 Minutes</p>
             <p className="mt-2 text-sm text-gray-500">
-              Average time to complete a FinCEN filing
+              Average time to complete a filing with TitleComply
             </p>
-          </div>
-          <div>
-            <p className="text-4xl font-bold text-[#1E3A5F]">$50K+</p>
-            <p className="mt-2 text-sm text-gray-500">
-              Penalty risk eliminated per transaction
-            </p>
-          </div>
-          <div>
-            <p className="text-4xl font-bold text-[#1E3A5F]">99.9%</p>
-            <p className="mt-2 text-sm text-gray-500">Uptime guaranteed</p>
           </div>
         </div>
 
@@ -27,10 +29,12 @@ export function SocialProof() {
               &ldquo;
             </div>
             <p className="text-lg italic leading-relaxed text-[#0F172A] md:text-xl">
-              I spent 15 years in real estate and tech, and saw firsthand how
-              the FinCEN rule would overwhelm small title shops. TitleComply
-              was built to fix that — enterprise compliance automation at a
-              price any title company can afford.
+              I watched title companies across South Florida scramble to
+              understand the new FinCEN rule. Most had no process, no
+              automation, and no idea the penalties could hit $50,000 per
+              missed filing. I built TitleComply because every title company in
+              America needs this - not just the ones that can afford a
+              compliance department.
             </p>
             <div className="mt-6 flex items-center justify-center gap-4 text-left">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1E3A5F] font-bold text-white">

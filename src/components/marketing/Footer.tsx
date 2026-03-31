@@ -41,6 +41,14 @@ export function Footer() {
                   OFAC Screening Tool
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/blog"
+                  className="text-sm text-gray-400 transition-colors hover:text-white"
+                >
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -96,6 +104,10 @@ export function Footer() {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <p className="text-sm text-gray-500">
             © 2026 TitleComply. All rights reserved.
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Built for 31 CFR Part 1031 workflows and BSA E-Filing-ready report
+            generation.
           </p>
         </div>
       </div>

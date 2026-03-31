@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
-const tabs = ["Screening", "Data Collection", "AI Extraction", "Filing"] as const;
+const tabs = [
+  "Screening",
+  "Data Collection",
+  "AI Extraction",
+  "Filing",
+  "Dashboard",
+] as const;
 type Tab = (typeof tabs)[number];
 
 function ScreeningMockup() {
@@ -209,6 +215,66 @@ function FilingMockup() {
   );
 }
 
+function DashboardMockup() {
+  return (
+    <div className="mx-auto max-w-4xl rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
+      <div className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3">
+        <div className="h-3 w-3 rounded-full bg-red-400" />
+        <div className="h-3 w-3 rounded-full bg-amber-400" />
+        <div className="h-3 w-3 rounded-full bg-green-400" />
+        <div className="ml-2 text-xs text-gray-400">titlecomply.com/dashboard</div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+        {[
+          ["Active Transactions", "12"],
+          ["Filings This Month", "8"],
+          ["Overdue", "1"],
+          ["Compliance Score", "94%"],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+            <p className="text-xs text-gray-500">{label}</p>
+            <p className="mt-1 text-xl font-bold text-[#0F172A]">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
+        <p className="text-sm font-semibold text-[#0F172A]">Pipeline</p>
+        <div className="mt-3 space-y-2">
+          {[
+            ["Screening", 3],
+            ["Collecting", 4],
+            ["Validating", 2],
+            ["Ready to File", 2],
+            ["Filed", 1],
+          ].map(([stage, count]) => (
+            <div key={stage as string}>
+              <div className="mb-1 flex items-center justify-between text-xs">
+                <span className="text-gray-500">{stage as string}</span>
+                <span className="font-semibold text-[#0F172A]">{count as number}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-white">
+                <div
+                  className="h-2 rounded-full bg-[#2563EB]"
+                  style={{ width: `${Math.max((count as number) * 20, 10)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
+        <p className="text-xs font-semibold text-orange-800">Filing Overdue - TC-2026-047</p>
+        <p className="mt-1 text-xs text-orange-700">
+          Closing packet complete, but filing has not been generated. Deadline risk: high.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ProductDemo() {
   const [activeTab, setActiveTab] = useState<Tab>("Screening");
 
@@ -234,12 +300,13 @@ export function ProductDemo() {
             </button>
           ))}
         </div>
-        <div className="mt-8 rounded-2xl bg-gray-50/50 p-2 shadow-inner md:p-4">
+        <div className="mt-8 rounded-2xl bg-[#0F172A] p-2 shadow-inner md:p-4">
           <div className="transition-all duration-300">
             {activeTab === "Screening" ? <ScreeningMockup /> : null}
             {activeTab === "Data Collection" ? <DataCollectionMockup /> : null}
             {activeTab === "AI Extraction" ? <ExtractionMockup /> : null}
             {activeTab === "Filing" ? <FilingMockup /> : null}
+            {activeTab === "Dashboard" ? <DashboardMockup /> : null}
           </div>
         </div>
       </div>
